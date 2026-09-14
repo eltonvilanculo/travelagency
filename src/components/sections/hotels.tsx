@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { localizedPath, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 
@@ -19,6 +20,9 @@ type HotelsProps = {
   locale: Locale;
   copy: Dictionary["sections"]["hotels"];
   hotels: HotelCard[];
+  /** Dates carried over from the Hero search widget — forwarded onto each
+   * card's booking link so the customer doesn't have to re-enter them. */
+  bookingDates?: { checkIn?: string; checkOut?: string; rooms?: string };
 };
 
 const StarIcon = () => (
@@ -33,7 +37,12 @@ const LocationIcon = () => (
   </svg>
 );
 
-export function Hotels({ locale, copy, hotels }: HotelsProps) {
+export function Hotels({ locale, copy, hotels, bookingDates }: HotelsProps) {
+  const dateParams = new URLSearchParams();
+  if (bookingDates?.checkIn) dateParams.set("date", bookingDates.checkIn);
+  if (bookingDates?.checkOut) dateParams.set("dateTo", bookingDates.checkOut);
+  if (bookingDates?.rooms) dateParams.set("rooms", bookingDates.rooms);
+  const dateQuery = dateParams.toString();
   return (
     <div className="px-7 lg:px-28 py-14 lg:py-28 bg-lightbeige">
       {/* Header */}
@@ -102,12 +111,13 @@ export function Hotels({ locale, copy, hotels }: HotelsProps) {
                 <div>
                   <p className="text-xs text-darkgray">{copy.from}</p>
                   <p className="text-orange font-bold text-lg">
-                    {hotel.currency} {hotel.priceFrom}
+                    {formatMZN(hotel.priceFrom, hotel.currency, locale)}
                     <span className="text-darkgray text-xs font-normal">{copy.perNight}</span>
                   </p>
+                  <p className="text-darkgray text-[11px]">{formatUSDApprox(hotel.priceFrom, hotel.currency, locale)}</p>
                 </div>
                 <Link
-                  href={`${localizedPath(locale, "/book")}?type=hotel&id=${hotel.id}`}
+                  href={`${localizedPath(locale, "/book")}?type=hotel&id=${hotel.id}${dateQuery ? `&${dateQuery}` : ""}`}
                   className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-4 py-2 text-xs font-semibold uppercase transition-all duration-300"
                 >
                   {copy.checkAvailability}

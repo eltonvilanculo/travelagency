@@ -53,3 +53,38 @@ export const quoteRequestSchema = z.discriminatedUnion("serviceType", [
   z.object({ serviceType: z.literal("PACKAGE"), itemId: z.string().min(1), passengers: z.number().int().positive() }),
   z.object({ serviceType: z.literal("SERVICE"), itemId: z.string().min(1), quantity: z.number().int().positive() }),
 ]);
+
+// One item inside a "Minha Viagem" trip group — the same per-type shape as
+// createReservationSchema, minus customer/locale/customerRemarks (those
+// are hoisted to one shared block on createTripSchema below, since a trip
+// group has one contact and one note for the whole submission, not one
+// per item).
+const dateFields = { dateFrom: z.string().optional(), dateTo: z.string().optional() };
+export const tripItemSchema = z.discriminatedUnion("serviceType", [
+  z.object({
+    serviceType: z.literal("FLIGHT"),
+    itemId: z.string().optional(),
+    origin: z.string().min(1, "Origem é obrigatória"),
+    destinationCity: z.string().min(1, "Destino é obrigatório"),
+    passengers: z.number().int().positive(),
+    ...dateFields,
+  }),
+  z.object({ serviceType: z.literal("HOTEL"), itemId: z.string().min(1), nights: z.number().int().positive(), rooms: z.number().int().positive(), ...dateFields }),
+  z.object({ serviceType: z.literal("CAR"), itemId: z.string().min(1), days: z.number().int().positive(), ...dateFields }),
+  z.object({ serviceType: z.literal("PACKAGE"), itemId: z.string().min(1), passengers: z.number().int().positive(), ...dateFields }),
+  z.object({ serviceType: z.literal("SERVICE"), itemId: z.string().min(1), quantity: z.number().int().positive(), ...dateFields }),
+]);
+
+export type TripItemInput = z.infer<typeof tripItemSchema>;
+
+export const createTripSchema = z.object({
+  locale: z.enum(["pt", "en"]).default("pt"),
+  customerRemarks: z.string().max(2000).optional(),
+  customer: baseFields.customer,
+  // Capped — this is a trip builder for a real itinerary, not a bulk
+  // import path; the same per-phone rate limit as single reservations
+  // still applies on top of this.
+  items: z.array(tripItemSchema).min(1).max(10),
+});
+
+export type CreateTripInput = z.infer<typeof createTripSchema>;

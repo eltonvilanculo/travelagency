@@ -12,21 +12,19 @@
   --color-textdark: #0B2340;
 }
 
-/* Brand typeface — one consistent family across headings and body,
-   rather than the previous mismatched Playfair Display/Inter/Raleway
-   mix. Not a webfont: relies on the OS-installed "Lucida Sans Unicode"
-   (ships with Windows), with metrically-similar fallbacks for platforms
-   that don't have it. */
-:root {
-  --font-brand: "Lucida Sans Unicode", "Lucida Sans", "Lucida Grande", Verdana, sans-serif;
-}
-
+/* Brand typeface — Playfair Display for headings (warm, editorial serif;
+   the character a flat single sans-serif can't give a travel brand),
+   Inter for body (clean, highly legible). Both loaded via next/font/google
+   only on the public [lang] tree (see [lang]/layout.tsx) — the var()
+   fallback chains below are what the admin backoffice actually renders
+   with, since it never loads these font files: a plain system sans/serif,
+   which is exactly right for a data-dense internal tool. */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-brand);
+  font-family: var(--font-playfair-display), Georgia, serif;
 }
 
 body {
-  font-family: var(--font-brand);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 .embla__viewport {

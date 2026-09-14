@@ -12,6 +12,7 @@ import {
   type Locale,
 } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
+import { AccountMenu } from "@/components/layout/account-menu";
 
 type NavbarProps = {
   locale: Locale;
@@ -108,6 +109,7 @@ export function Navbar({ locale, copy }: NavbarProps) {
 
         <div className="flex items-center gap-3">
           {languageSwitcher()}
+          <AccountMenu locale={locale} />
           <Link
             href={localizedPath(locale, "/book")}
             className="bg-orange hover:bg-orange/90 text-white transition-all duration-300 rounded-3xl px-6 py-3 uppercase text-sm font-semibold"
@@ -167,6 +169,7 @@ export function Navbar({ locale, copy }: NavbarProps) {
               </Link>
             ))}
             {languageSwitcher()}
+            <AccountMenu locale={locale} />
             <Link
               href={localizedPath(locale, "/book")}
               onClick={() => setMobileOpen(false)}

@@ -57,8 +57,8 @@ export function BookingOptions({ locale, copy }: BookingOptionsProps) {
 
           return (
             <AnimateIn key={opt.id} delay={i * 120}>
-              <div className="bg-white border border-darkgray/30 rounded-2xl p-8 flex flex-col gap-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group h-full">
-                <div className="w-16 h-16 rounded-full bg-beige group-hover:bg-orange/10 flex items-center justify-center text-orange transition-colors duration-300">
+              <div className="bg-white border border-darkgray/30 rounded-2xl p-6 sm:p-8 flex flex-col items-center text-center gap-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group h-full">
+                <div className="w-16 h-16 rounded-full bg-beige group-hover:bg-orange/10 flex items-center justify-center text-orange transition-colors duration-300 shrink-0">
                   <Icon />
                 </div>
                 <div>
@@ -67,7 +67,7 @@ export function BookingOptions({ locale, copy }: BookingOptionsProps) {
                 </div>
                 <Link
                   href={href}
-                  className="mt-auto bg-orange/10 text-orange hover:bg-orange hover:text-white transition-all duration-300 rounded-3xl px-6 py-3 text-sm font-semibold uppercase w-fit"
+                  className="mt-auto bg-orange/10 text-orange hover:bg-orange hover:text-white transition-all duration-300 rounded-3xl px-6 py-3 text-sm font-semibold uppercase"
                 >
                   {opt.cta}
                 </Link>

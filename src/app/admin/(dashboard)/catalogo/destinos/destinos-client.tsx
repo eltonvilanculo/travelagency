@@ -80,7 +80,7 @@ const STATUS_ACTIONS: Record<ContentStatus, { primary?: [ContentStatus, string];
   DRAFT: { primary: ["IN_REVIEW", "Enviar para revisão"] },
   IN_REVIEW: { primary: ["APPROVED", "Aprovar"], secondary: ["DRAFT", "Devolver a rascunho"] },
   APPROVED: { primary: ["PUBLISHED", "Publicar"], secondary: ["DRAFT", "Devolver a rascunho"] },
-  PUBLISHED: { secondary: ["APPROVED", "Despublicar"] },
+  PUBLISHED: { secondary: ["APPROVED", "Remover Publicação"] },
   ARCHIVED: { primary: ["DRAFT", "Restaurar para rascunho"] },
 };
 

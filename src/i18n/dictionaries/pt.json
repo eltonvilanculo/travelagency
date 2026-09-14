@@ -45,7 +45,6 @@
       "slogan": "Viaje. Descubra. Viva.",
       "description": "A ZambiTour é o parceiro de confiança para viagens na África Austral: voos, hotéis, aluguer de carros e itinerários de safari personalizados pela Zâmbia, Zimbábue, África do Sul, Moçambique, Botswana e muito mais.",
       "followUs": "Siga-nos",
-      "instagramAlt": "ZambiTour no Instagram",
       "contactTitle": "Contactos",
       "legalName": "Zambi Tours Agência de Viagens, SU, LDA",
       "nuitLabel": "NUIT",
@@ -114,7 +113,13 @@
         "to": "Destino",
         "pickupCity": "Cidade de levantamento",
         "dropOffCity": "Cidade de entrega",
-        "destination": "Destino"
+        "destination": "Destino",
+        "departureDate": "Partida",
+        "returnDateOptional": "Regresso (opcional)",
+        "checkIn": "Check-in",
+        "checkOut": "Check-out",
+        "pickupDate": "Levantamento",
+        "dropOffDate": "Entrega"
       },
       "rooms": {
         "singular": "quarto",
@@ -127,6 +132,10 @@
       "carTypes": ["Económico", "SUV", "4x4 Safari", "Minibus"],
       "search": "Pesquisar",
       "sameCityError": "Escolha cidades diferentes para a origem e o destino.",
+      "dateError": "A data de regresso não pode ser anterior à data de partida.",
+      "tripHint": "Precisa de combinar voo, hotel e carro no mesmo pedido?",
+      "tripHintCta": "Monte a sua viagem",
+      "tripHintWithItems": "Tem {count} itens na sua viagem — continuar a montar",
       "trustItems": [
         "Confirmação em 24h",
         "Garantia do Melhor Preço",
@@ -236,7 +245,8 @@
         "flight": "Voo",
         "hotel": "Hotel",
         "car": "Aluguer",
-        "package": "Pacote"
+        "package": "Pacote",
+        "service": "Serviço"
       },
       "labels": {
         "from": "Origem *",
@@ -261,6 +271,8 @@
         "selectHotel": "Hotel *",
         "selectVehicle": "Viatura *",
         "selectPackage": "Pacote *",
+        "selectService": "Serviço *",
+        "quantity": "Quantidade *",
         "remarks": "Observações (opcional)",
         "included": "O que está incluído"
       },
@@ -280,6 +292,7 @@
         "selectHotel": "Escolha um hotel",
         "selectVehicle": "Escolha uma viatura",
         "selectPackage": "Escolha um pacote",
+        "selectService": "Escolha um serviço",
         "remarks": "Algo que devamos saber sobre a sua viagem?"
       },
       "passengers": {
@@ -294,8 +307,16 @@
         "singular": "hóspede",
         "plural": "hóspedes"
       },
+      "units": {
+        "singular": "unidade",
+        "plural": "unidades"
+      },
       "vehicleTypes": ["Sedan Económico", "SUV", "4x4 Safari", "Minibus"],
       "submit": "Enviar Pedido de Reserva",
+      "addToTrip": "Adicionar à Minha Viagem",
+      "addedToTrip": "Adicionado à sua viagem",
+      "addToTripHint": "Só isto, ou quer juntar mais serviços ao mesmo pedido?",
+      "viewTrip": "Ver a minha viagem ({count} itens)",
       "note": "Fazemos a sua cotação e tratamos o pagamento diretamente consigo.",
       "price": {
         "estimate": "Valor estimado",
@@ -303,6 +324,7 @@
         "perNight": "/noite",
         "perDay": "/dia",
         "perPerson": "/pessoa",
+        "perUnit": "/unidade",
         "quoteOnRequest": "Cotação feita por um dos nossos agentes",
         "unavailable": "Não foi possível calcular o preço para esta seleção"
       },
@@ -375,11 +397,11 @@
         { "title": "Passagens aéreas", "subtitle": "Flight Bookings", "description": "Emissão de bilhetes nacionais e internacionais, com procura das melhores rotas, horários e tarifas disponíveis.", "href": "/book" },
         { "title": "Reservas de hotéis", "subtitle": "Hotel Reservations", "description": "Alojamento seleccionado de acordo com a localização, o padrão pretendido e o orçamento do cliente.", "href": "/hotels" },
         { "title": "Pacotes turísticos", "subtitle": "Travel Packages", "description": "Programas organizados que reúnem transporte, alojamento e experiências num só serviço.", "href": "/destinations" },
-        { "title": "Seguro de viagem", "subtitle": "Travel Insurance", "description": "Cobertura adequada a cada destino e duração, para viajar com tranquilidade e em conformidade com as exigências de entrada.", "href": "/book" },
+        { "title": "Seguro de viagem", "subtitle": "Travel Insurance", "description": "Cobertura adequada a cada destino e duração, para viajar com tranquilidade e em conformidade com as exigências de entrada.", "href": "#servicos-extras" },
         { "title": "Aluguer de viaturas", "subtitle": "Car Rentals", "description": "Viaturas disponíveis para deslocações particulares, turísticas ou corporativas, com ou sem motorista.", "href": "/cars" },
-        { "title": "Apoio para vistos e documentação", "subtitle": "Visa and Documentation Assistance", "description": "Orientação e preparação do processo documental, reduzindo erros, atrasos e deslocações desnecessárias.", "href": "/book" },
-        { "title": "Guia turístico", "subtitle": "Tour Guide", "description": "Acompanhamento profissional que valoriza o destino e aproveita ao máximo o tempo disponível.", "href": "/book" },
-        { "title": "Protocolo", "subtitle": "Protocol", "description": "Receção, assistência e acompanhamento de passageiros, delegações e convidados institucionais.", "href": "/book" }
+        { "title": "Apoio para vistos e documentação", "subtitle": "Visa and Documentation Assistance", "description": "Orientação e preparação do processo documental, reduzindo erros, atrasos e deslocações desnecessárias.", "href": "#servicos-extras" },
+        { "title": "Guia turístico", "subtitle": "Tour Guide", "description": "Acompanhamento profissional que valoriza o destino e aproveita ao máximo o tempo disponível.", "href": "#servicos-extras" },
+        { "title": "Protocolo", "subtitle": "Protocol", "description": "Recepção, assistência e acompanhamento de passageiros, delegações e convidados institucionais.", "href": "#servicos-extras" }
       ],
       "calloutLabel": "Serviço Integrado",
       "callout": "Todos os serviços podem ser contratados isoladamente ou combinados num único pacote, com uma só proposta e um só interlocutor."
@@ -428,9 +450,14 @@
       "callout": "Seja uma viagem de férias ou uma missão institucional, o processo é o mesmo: ouvir, organizar e acompanhar."
     },
     "services": {
+      "eyebrow": "Mais do que Viagens",
       "title": "Tudo o Que Precisa para",
       "titleAccent": "Viajar por África",
-      "imageAlt": "Viagem"
+      "description": "Além de voos, hotéis e carros, tratamos também da documentação e do apoio que uma viagem exige.",
+      "imageAlt": "Viagem",
+      "from": "Desde",
+      "quoteOnly": "Sob consulta",
+      "cta": "Reservar"
     },
     "blog": {
       "title": "O Nosso Blog de Viagens",

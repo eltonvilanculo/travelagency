@@ -65,7 +65,8 @@ async function ToursAndPackagesSection({
     name: locale === "pt" ? p.namePt : p.nameEn,
     description: locale === "pt" ? p.itineraryPt : p.itineraryEn,
     days: p.durationDays,
-    price: Number(p.pricePerPerson).toLocaleString(locale === "pt" ? "pt-PT" : "en-US"),
+    price: Number(p.pricePerPerson),
+    currency: p.currency,
     image: p.images[0] || "/images/safari1.jpg",
   }));
   const packageCards: PackageCard[] = packages.map((p) => ({
@@ -85,7 +86,7 @@ async function ToursAndPackagesSection({
 
   return (
     <>
-      {tourCards.length > 0 && <Tours copy={toursCopy} tours={tourCards} />}
+      {tourCards.length > 0 && <Tours locale={locale} copy={toursCopy} tours={tourCards} />}
       {packageCards.length > 0 && <Packages locale={locale} copy={packagesCopy} packages={packageCards} />}
     </>
   );

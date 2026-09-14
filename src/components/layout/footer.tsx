@@ -60,12 +60,6 @@ const socialIcons = [
   },
 ];
 
-const instagramImages = [
-  "/images/Maldives.jpg",
-  "/images/Switzerland.jpg",
-  "/images/Iceland.jpg",
-];
-
 type FooterProps = {
   locale: Locale;
   copy: Dictionary["layout"]["footer"];
@@ -88,21 +82,6 @@ export function Footer({ locale, copy }: FooterProps) {
           </Link>
           <p className="text-orange text-xs uppercase tracking-[0.2em] font-semibold -mt-1.5">{copy.slogan}</p>
           <p className="text-white/60 max-w-sm leading-relaxed text-sm">{copy.description}</p>
-
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {socialIcons.map((s) => (
-              <Link
-                key={s.label}
-                href={s.href}
-                aria-label={s.label}
-                target={s.href.startsWith("http") ? "_blank" : undefined}
-                rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-orange hover:bg-orange/20 transition-all duration-300"
-              >
-                {s.icon}
-              </Link>
-            ))}
-          </div>
         </div>
 
         {/* Right: contact details + Instagram */}
@@ -125,17 +104,18 @@ export function Footer({ locale, copy }: FooterProps) {
 
           <div>
             <p className="text-white/40 text-xs uppercase tracking-widest mb-2.5">{copy.followUs}</p>
-            <div className="flex gap-2.5">
-              {instagramImages.map((img, i) => (
-                <div key={i} className="relative h-12 w-12 rounded-lg overflow-hidden group cursor-pointer shrink-0">
-                  <Image
-                    src={img}
-                    alt={copy.instagramAlt}
-                    fill
-                    sizes="48px"
-                    className="object-cover group-hover:scale-110 transition-all duration-300"
-                  />
-                </div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {socialIcons.map((s) => (
+                <Link
+                  key={s.label}
+                  href={s.href}
+                  aria-label={s.label}
+                  target={s.href.startsWith("http") ? "_blank" : undefined}
+                  rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-orange hover:bg-orange/20 transition-all duration-300"
+                >
+                  {s.icon}
+                </Link>
               ))}
             </div>
           </div>

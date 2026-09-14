@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
+import { formatMZN, formatUSDApprox } from "@/lib/currency";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 
 export type TourCard = {
@@ -9,11 +11,13 @@ export type TourCard = {
   name: string;
   description: string;
   days: number;
-  price: string;
+  price: number;
+  currency: string;
   image: string;
 };
 
 type ToursProps = {
+  locale: Locale;
   copy: Dictionary["sections"]["tours"];
   tours: TourCard[];
 };
@@ -37,7 +41,7 @@ const ArrowIcon = () => (
   </svg>
 );
 
-export function Tours({ copy, tours }: ToursProps) {
+export function Tours({ locale, copy, tours }: ToursProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start", slidesToScroll: 1 });
 
   return (
@@ -84,7 +88,10 @@ export function Tours({ copy, tours }: ToursProps) {
                         </div>
                         <div className="inline-flex gap-3 items-center">
                           <TagIcon />
-                          <p className="italic text-textdark">{copy.from} {tour.price}$</p>
+                          <div>
+                            <p className="italic text-textdark">{copy.from} {formatMZN(tour.price, tour.currency, locale)}</p>
+                            <p className="text-darkgray text-[11px]">{formatUSDApprox(tour.price, tour.currency, locale)}</p>
+                          </div>
                         </div>
                       </div>
                     </div>

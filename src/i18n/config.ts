@@ -1,8 +1,8 @@
-export const locales = ["en", "pt"] as const;
+export const locales = ["pt", "en"] as const;
 
 export type Locale = (typeof locales)[number];
 
-export const defaultLocale: Locale = "en";
+export const defaultLocale: Locale = "pt";
 
 export const localeOptions: Record<
   Locale,
@@ -16,15 +16,15 @@ export const localeOptions: Record<
     flagCountryCode: string;
   }
 > = {
-  en: {
-    label: "English",
-    shortLabel: "EN",
-    flagCountryCode: "za",
-  },
   pt: {
     label: "Português",
     shortLabel: "PT",
     flagCountryCode: "mz",
+  },
+  en: {
+    label: "English",
+    shortLabel: "EN",
+    flagCountryCode: "za",
   },
 };
 

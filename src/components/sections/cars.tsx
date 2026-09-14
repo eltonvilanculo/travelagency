@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { localizedPath, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 
@@ -20,6 +21,9 @@ type CarsProps = {
   locale: Locale;
   copy: Dictionary["sections"]["cars"];
   cars: CarCard[];
+  /** Rental period carried over from the Hero search widget — forwarded
+   * onto each card's booking link so it doesn't have to be re-entered. */
+  bookingDates?: { pickupDate?: string; returnDate?: string };
 };
 
 const SeatIcon = () => (
@@ -40,7 +44,11 @@ const GearIcon = () => (
   </svg>
 );
 
-export function Cars({ locale, copy, cars }: CarsProps) {
+export function Cars({ locale, copy, cars, bookingDates }: CarsProps) {
+  const dateParams = new URLSearchParams();
+  if (bookingDates?.pickupDate) dateParams.set("date", bookingDates.pickupDate);
+  if (bookingDates?.returnDate) dateParams.set("dateTo", bookingDates.returnDate);
+  const dateQuery = dateParams.toString();
   return (
     <div className="px-7 lg:px-28 py-14 lg:py-28 bg-beige">
       {/* Header */}
@@ -115,12 +123,13 @@ export function Cars({ locale, copy, cars }: CarsProps) {
                 <div>
                   <p className="text-xs text-darkgray">{copy.from}</p>
                   <p className="text-orange font-bold text-xl">
-                    {car.currency} {car.pricePerDay}
+                    {formatMZN(car.pricePerDay, car.currency, locale)}
                     <span className="text-darkgray text-xs font-normal">{copy.perDay}</span>
                   </p>
+                  <p className="text-darkgray text-[11px]">{formatUSDApprox(car.pricePerDay, car.currency, locale)}</p>
                 </div>
                 <Link
-                  href={`${localizedPath(locale, "/book")}?type=car&id=${car.id}`}
+                  href={`${localizedPath(locale, "/book")}?type=car&id=${car.id}${dateQuery ? `&${dateQuery}` : ""}`}
                   className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-4 py-2 text-xs font-semibold uppercase transition-all duration-300"
                 >
                   {copy.reserveCar}

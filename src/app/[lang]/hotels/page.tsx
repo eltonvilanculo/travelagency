@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Shell } from "@/components/layout/shell";
 import { BookingWithCatalog } from "@/components/sections/booking-with-catalog";
+import type { BookingInitialValues } from "@/components/sections/booking";
 import { Hotels, type HotelCard } from "@/components/sections/hotels";
 import { SectionSkeleton, BookingFormSkeleton } from "@/components/ui/skeleton";
 import { getLocalizedDictionary } from "@/i18n/server";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 type LocalePageProps = {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ destination?: string }>;
+  searchParams: Promise<{ destination?: string; checkIn?: string; checkOut?: string; rooms?: string }>;
 };
 
 export async function generateMetadata({ params }: LocalePageProps): Promise<Metadata> {
@@ -29,10 +30,12 @@ async function HotelsSection({
   locale,
   copy,
   destinationFilter,
+  bookingDates,
 }: {
   locale: Locale;
   copy: Dictionary["sections"]["hotels"];
   destinationFilter?: string;
+  bookingDates: { checkIn?: string; checkOut?: string; rooms?: string };
 }) {
   const hotels = await HotelService.findAll({ status: "PUBLISHED" });
   const needle = destinationFilter?.trim().toLowerCase();
@@ -58,14 +61,18 @@ async function HotelsSection({
   }));
 
   if (hotelCards.length === 0) return null;
-  return <Hotels locale={locale} copy={copy} hotels={hotelCards} />;
+  return <Hotels locale={locale} copy={copy} hotels={hotelCards} bookingDates={bookingDates} />;
 }
 
 export default async function HotelsPage({ params, searchParams }: LocalePageProps) {
   const { lang } = await params;
-  const { destination } = await searchParams;
+  const { destination, checkIn, checkOut, rooms } = await searchParams;
   const { locale, dict } = getLocalizedDictionary(lang);
   const page = dict.pages.hotels;
+
+  const initial: BookingInitialValues | undefined = checkIn || checkOut
+    ? { tab: "hotel", date: checkIn, dateTo: checkOut, rooms: rooms ? Number(rooms) || undefined : undefined }
+    : undefined;
 
   return (
     <Shell locale={locale} copy={dict.layout}>
@@ -88,10 +95,10 @@ export default async function HotelsPage({ params, searchParams }: LocalePagePro
           />
         }
       >
-        <HotelsSection locale={locale} copy={dict.sections.hotels} destinationFilter={destination} />
+        <HotelsSection locale={locale} copy={dict.sections.hotels} destinationFilter={destination} bookingDates={{ checkIn, checkOut, rooms }} />
       </Suspense>
       <Suspense fallback={<BookingFormSkeleton />}>
-        <BookingWithCatalog locale={locale} copy={dict.sections.booking} />
+        <BookingWithCatalog locale={locale} copy={dict.sections.booking} initial={initial} />
       </Suspense>
     </Shell>
   );

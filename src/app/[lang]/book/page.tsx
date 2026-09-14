@@ -18,7 +18,9 @@ type LocalePageProps = {
     from?: string;
     to?: string;
     date?: string;
+    dateTo?: string;
     passengers?: string;
+    rooms?: string;
   }>;
 };
 
@@ -29,7 +31,7 @@ export async function generateMetadata({ params }: LocalePageProps): Promise<Met
   return dict.metadata.book;
 }
 
-const VALID_TABS = new Set(["flight", "hotel", "car", "package"]);
+const VALID_TABS = new Set(["flight", "hotel", "car", "package", "service"]);
 
 export default async function BookPage({ params, searchParams }: LocalePageProps) {
   const { lang } = await params;
@@ -44,7 +46,9 @@ export default async function BookPage({ params, searchParams }: LocalePageProps
         from: query.from,
         to: query.to,
         date: query.date,
+        dateTo: query.dateTo,
         passengers: query.passengers ? Number(query.passengers) || undefined : undefined,
+        rooms: query.rooms ? Number(query.rooms) || undefined : undefined,
       }
     : undefined;
 

@@ -439,6 +439,22 @@ model Reservation {
   agentId String?
   agent   AdminUser? @relation("ReservationAgent", fields: [agentId], references: [id])
 
+  // Groups reservations submitted together from the "Minha Viagem" trip
+  // builder (a flight + a hotel + a service, submitted as one request) —
+  // null for a reservation made the ordinary single-item way. Deliberately
+  // just a shared opaque string, not a separate TripGroup table: nothing
+  // about a trip group needs its own fields yet (no group-level status),
+  // it's purely a join key for "show me everything submitted together" and
+  // for building one downloadable quote across the set.
+  tripGroupId String?
+
+  // Set when the customer was signed in (Google) at submission time — who
+  // it actually was, independent of whatever name/phone/email they typed
+  // into the form (booking on behalf of someone else is normal). Null for
+  // a guest checkout, which remains fully supported.
+  customerUserId String?
+  customerUser   CustomerUser? @relation(fields: [customerUserId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -448,7 +464,30 @@ model Reservation {
   @@index([status])
   @@index([customerId])
   @@index([agentId])
+  @@index([tripGroupId])
+  @@index([customerUserId])
   @@map("reservations")
+}
+
+/// A signed-in customer identity (Google OAuth) — separate from Customer,
+/// which is guest-checkout contact info captured per reservation and never
+/// required to match across bookings. This is the "who is asking" side:
+/// lets a returning customer see their own trip-group history. JWT session
+/// strategy (matching admin's own auth setup) means no NextAuth
+/// Account/Session tables are needed — this is the one row per person we
+/// do want to persist.
+model CustomerUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  googleId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+
+  @@map("customer_users")
 }
 
 /// RF-025 — agent annotations, attached quotes, internal comms trail.

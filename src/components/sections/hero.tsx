@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CitySelect } from "@/components/ui/city-select";
 import { localizedPath, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
+import { useTrip } from "@/lib/trip-context";
 
 type Tab = "flight" | "hotel" | "car";
 
@@ -44,16 +45,33 @@ function countLabel(count: number, singular: string, plural: string) {
   return `${count} ${count > 1 ? plural : singular}`;
 }
 
+// Local calendar date, not UTC — a native <input type="date"> shows and
+// validates against the browser's local date, so computing "today" via
+// toISOString() (always UTC) silently rejects the user's actual today
+// whenever their timezone is far enough ahead of UTC to have already
+// crossed midnight UTC while their own clock hasn't (true for Maputo,
+// UTC+2, every night from 22:00 local).
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function Hero({ locale, copy }: HeroProps) {
   const router = useRouter();
+  const { items: tripItems, open: openTrip } = useTrip();
   const [tab, setTab] = useState<Tab>("flight");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // One generic date pair, relabelled per tab: departure/return for
+  // flights, check-in/check-out for hotels, pickup/drop-off for cars.
+  // The return/end date is always shown but never required — leaving it
+  // blank on a flight search is simply a one-way trip, no separate
+  // "trip type" choice needed up front.
   const [date, setDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [passengers, setPassengers] = useState(1);
   const [rooms, setRooms] = useState(1);
   const [carType, setCarType] = useState("");
@@ -70,18 +88,29 @@ export function Hero({ locale, copy }: HeroProps) {
     setError(null);
   };
 
+  const handleDateChange = (value: string) => {
+    setDate(value);
+    if (endDate && value && endDate < value) setEndDate("");
+  };
+
   const handleSearch = () => {
     setError(null);
 
+    if (tab === "flight" && from && to && from === to) {
+      setError(copy.sameCityError);
+      return;
+    }
+    if (date && endDate && endDate < date) {
+      setError(copy.dateError);
+      return;
+    }
+
     if (tab === "flight") {
-      if (from && to && from === to) {
-        setError(copy.sameCityError);
-        return;
-      }
       const params = new URLSearchParams({ type: "flight" });
       if (from) params.set("from", from);
       if (to) params.set("to", to);
       if (date) params.set("date", date);
+      if (endDate) params.set("dateTo", endDate);
       params.set("passengers", String(passengers));
       router.push(`${localizedPath(locale, "/book")}?${params.toString()}`);
       return;
@@ -90,14 +119,22 @@ export function Hero({ locale, copy }: HeroProps) {
     if (tab === "hotel") {
       const params = new URLSearchParams();
       if (to) params.set("destination", to);
+      if (date) params.set("checkIn", date);
+      if (endDate) params.set("checkOut", endDate);
+      params.set("rooms", String(rooms));
       const query = params.toString();
       router.push(`${localizedPath(locale, "/hotels")}${query ? `?${query}` : ""}`);
       return;
     }
 
     // Cars aren't modelled per-destination in the catalog (a fleet, not
-    // city-scoped listings) — nothing to filter by, just go browse them.
-    router.push(localizedPath(locale, "/cars"));
+    // city-scoped listings) — nothing to filter the list by, but the
+    // rental period still carries through to prefill the booking form.
+    const params = new URLSearchParams();
+    if (date) params.set("pickupDate", date);
+    if (endDate) params.set("returnDate", endDate);
+    const query = params.toString();
+    router.push(`${localizedPath(locale, "/cars")}${query ? `?${query}` : ""}`);
   };
 
   return (
@@ -152,28 +189,45 @@ export function Hero({ locale, copy }: HeroProps) {
           </div>
 
           {/* Search row */}
-          <div className="flex flex-col sm:flex-row gap-2 p-2 bg-white rounded-xl">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-2 bg-white rounded-xl">
             {tab !== "hotel" && (
               <CitySelect
                 value={from}
                 onChange={setFrom}
                 placeholder={tab === "car" ? copy.fields.pickupCity : copy.fields.from}
-                className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white min-w-0"
+                className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white min-w-0 basis-full sm:basis-auto"
               />
             )}
             <CitySelect
               value={to}
               onChange={setTo}
               placeholder={tab === "car" ? copy.fields.dropOffCity : tab === "hotel" ? copy.fields.destination : copy.fields.to}
-              className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white min-w-0"
+              className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white min-w-0 basis-full sm:basis-auto"
             />
-            <input
-              type="date"
-              min={todayStr()}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange min-w-0"
-            />
+            <div className="flex-1 min-w-[130px] border border-shadow rounded-lg px-3 py-1.5 focus-within:border-orange">
+              <label className="block text-[9px] uppercase tracking-wide text-darkgray leading-none pt-0.5">
+                {tab === "hotel" ? copy.fields.checkIn : tab === "car" ? copy.fields.pickupDate : copy.fields.departureDate}
+              </label>
+              <input
+                type="date"
+                min={todayStr()}
+                value={date}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="w-full text-parablack text-sm focus:outline-none -ml-px"
+              />
+            </div>
+            <div className="flex-1 min-w-[130px] border border-shadow rounded-lg px-3 py-1.5 focus-within:border-orange">
+              <label className="block text-[9px] uppercase tracking-wide text-darkgray leading-none pt-0.5">
+                {tab === "hotel" ? copy.fields.checkOut : tab === "car" ? copy.fields.dropOffDate : copy.fields.returnDateOptional}
+              </label>
+              <input
+                type="date"
+                min={date || todayStr()}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full text-parablack text-sm focus:outline-none -ml-px"
+              />
+            </div>
             <select
               value={tab === "hotel" ? rooms : tab === "car" ? carType : passengers}
               onChange={(e) =>
@@ -203,6 +257,24 @@ export function Hero({ locale, copy }: HeroProps) {
           </div>
           {error && <p className="text-orange text-xs px-2 pt-2">{error}</p>}
         </div>
+
+        {/* Trip builder hint — planted right where someone is already
+            thinking about one service, to nudge that a flight + hotel +
+            car (+ services) can go in the same request. */}
+        <p className="text-white/50 text-xs mt-4 animate-fade-up" style={{ animationDelay: "500ms" }}>
+          {tripItems.length > 0 ? (
+            <button type="button" onClick={openTrip} className="underline text-white/80 hover:text-white cursor-pointer">
+              {copy.tripHintWithItems.replace("{count}", String(tripItems.length))}
+            </button>
+          ) : (
+            <>
+              {copy.tripHint}{" "}
+              <button type="button" onClick={openTrip} className="underline text-white/80 hover:text-white cursor-pointer">
+                {copy.tripHintCta}
+              </button>
+            </>
+          )}
+        </p>
 
         {/* Trust badges */}
         <div className="flex flex-wrap gap-6 mt-8 animate-fade-up" style={{ animationDelay: "600ms" }}>

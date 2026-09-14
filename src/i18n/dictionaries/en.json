@@ -45,7 +45,6 @@
       "slogan": "Travel. Discover. Live.",
       "description": "ZambiTour is Southern Africa's trusted travel partner: flights, hotels, car rentals, and bespoke safari itineraries across Zambia, Zimbabwe, South Africa, Mozambique, Botswana, and beyond.",
       "followUs": "Follow Us",
-      "instagramAlt": "ZambiTour on Instagram",
       "contactTitle": "Contact",
       "legalName": "Zambi Tours Agência de Viagens, SU, LDA",
       "nuitLabel": "Tax ID (NUIT)",
@@ -114,7 +113,13 @@
         "to": "To",
         "pickupCity": "Pickup city",
         "dropOffCity": "Drop-off city",
-        "destination": "Destination"
+        "destination": "Destination",
+        "departureDate": "Departure",
+        "returnDateOptional": "Return (optional)",
+        "checkIn": "Check-in",
+        "checkOut": "Check-out",
+        "pickupDate": "Pick-up",
+        "dropOffDate": "Drop-off"
       },
       "rooms": {
         "singular": "room",
@@ -127,6 +132,10 @@
       "carTypes": ["Economy", "SUV", "4x4 Safari", "Minibus"],
       "search": "Search",
       "sameCityError": "Choose different cities for origin and destination.",
+      "dateError": "The return date cannot be earlier than the departure date.",
+      "tripHint": "Need to combine a flight, hotel and car in one request?",
+      "tripHintCta": "Build your trip",
+      "tripHintWithItems": "You have {count} items in your trip — keep building",
       "trustItems": [
         "24h Booking Confirmation",
         "Best Price Guarantee",
@@ -236,7 +245,8 @@
         "flight": "Flight",
         "hotel": "Hotel",
         "car": "Car Rental",
-        "package": "Package"
+        "package": "Package",
+        "service": "Service"
       },
       "labels": {
         "from": "From *",
@@ -261,6 +271,8 @@
         "selectHotel": "Hotel *",
         "selectVehicle": "Vehicle *",
         "selectPackage": "Package *",
+        "selectService": "Service *",
+        "quantity": "Quantity *",
         "remarks": "Notes (optional)",
         "included": "What's included"
       },
@@ -280,6 +292,7 @@
         "selectHotel": "Choose a hotel",
         "selectVehicle": "Choose a vehicle",
         "selectPackage": "Choose a package",
+        "selectService": "Choose a service",
         "remarks": "Anything we should know about your trip?"
       },
       "passengers": {
@@ -294,12 +307,21 @@
         "singular": "guest",
         "plural": "guests"
       },
+      "units": {
+        "singular": "unit",
+        "plural": "units"
+      },
       "vehicleTypes": ["Economy Sedan", "SUV", "4x4 Safari", "Minibus"],
       "submit": "Send Booking Request",
+      "addToTrip": "Add to My Trip",
+      "addedToTrip": "Added to your trip",
+      "addToTripHint": "Just this, or add more services to the same request?",
+      "viewTrip": "View my trip ({count} items)",
       "note": "We prepare your quote and handle payment directly with you.",
       "price": {
         "estimate": "Estimated total",
         "calculating": "Calculating...",
+        "perUnit": "/unit",
         "perNight": "/night",
         "perDay": "/day",
         "perPerson": "/person",
@@ -375,11 +397,11 @@
         { "title": "Flight Bookings", "subtitle": "Passagens aéreas", "description": "Issuing domestic and international tickets, sourcing the best routes, schedules and fares available.", "href": "/book" },
         { "title": "Hotel Reservations", "subtitle": "Reservas de hotéis", "description": "Accommodation selected according to location, standard and the client's budget.", "href": "/hotels" },
         { "title": "Travel Packages", "subtitle": "Pacotes turísticos", "description": "Organised programmes bringing transport, accommodation and experiences together in one service.", "href": "/destinations" },
-        { "title": "Travel Insurance", "subtitle": "Seguro de viagem", "description": "Coverage suited to each destination and duration, so you can travel with peace of mind and in line with entry requirements.", "href": "/book" },
+        { "title": "Travel Insurance", "subtitle": "Seguro de viagem", "description": "Coverage suited to each destination and duration, so you can travel with peace of mind and in line with entry requirements.", "href": "#servicos-extras" },
         { "title": "Car Rentals", "subtitle": "Aluguer de viaturas", "description": "Vehicles available for personal, tourist or corporate travel, with or without a driver.", "href": "/cars" },
-        { "title": "Visa and Documentation Assistance", "subtitle": "Apoio para vistos e documentação", "description": "Guidance and preparation of the documentation process, reducing errors, delays and unnecessary trips.", "href": "/book" },
-        { "title": "Tour Guide", "subtitle": "Guia turístico", "description": "Professional guidance that makes the most of the destination and the time available.", "href": "/book" },
-        { "title": "Protocol", "subtitle": "Protocolo", "description": "Reception, assistance and support for passengers, delegations and institutional guests.", "href": "/book" }
+        { "title": "Visa and Documentation Assistance", "subtitle": "Apoio para vistos e documentação", "description": "Guidance and preparation of the documentation process, reducing errors, delays and unnecessary trips.", "href": "#servicos-extras" },
+        { "title": "Tour Guide", "subtitle": "Guia turístico", "description": "Professional guidance that makes the most of the destination and the time available.", "href": "#servicos-extras" },
+        { "title": "Protocol", "subtitle": "Protocolo", "description": "Reception, assistance and support for passengers, delegations and institutional guests.", "href": "#servicos-extras" }
       ],
       "calloutLabel": "Integrated Service",
       "callout": "Every service can be booked on its own or combined into a single package, with one proposal and one point of contact."
@@ -428,9 +450,14 @@
       "callout": "Whether it's a holiday or an institutional mission, the process is the same: listen, organise and support."
     },
     "services": {
+      "eyebrow": "More Than Travel",
       "title": "Everything You Need to",
       "titleAccent": "Travel Africa",
-      "imageAlt": "Travel"
+      "description": "Beyond flights, hotels and cars, we also handle the documentation and support a trip requires.",
+      "imageAlt": "Travel",
+      "from": "From",
+      "quoteOnly": "On request",
+      "cta": "Book"
     },
     "blog": {
       "title": "Our Travel Blog",

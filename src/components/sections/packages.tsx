@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { localizedPath, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 
@@ -97,9 +98,10 @@ export function Packages({ locale, copy, packages }: PackagesProps) {
                 <div>
                   <p className="text-xs text-darkgray">{copy.from}</p>
                   <p className="text-orange font-bold text-xl">
-                    {pkg.currency} {pkg.priceFrom.toLocaleString()}
+                    {formatMZN(pkg.priceFrom, pkg.currency, locale)}
                     <span className="text-darkgray text-xs font-normal">{copy.perPerson}</span>
                   </p>
+                  <p className="text-darkgray text-[11px]">{formatUSDApprox(pkg.priceFrom, pkg.currency, locale)}</p>
                 </div>
                 <Link
                   href={`${localizedPath(locale, "/book")}?type=package&id=${pkg.id}`}

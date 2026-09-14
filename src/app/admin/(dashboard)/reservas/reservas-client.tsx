@@ -15,6 +15,7 @@ type Payment = { id: string; method: string; status: string; amount: string; cur
 type Reservation = {
   id: string;
   reference: string;
+  tripGroupId: string | null;
   serviceType: ServiceType;
   status: ReservationStatus;
   customer: Customer;
@@ -321,7 +322,20 @@ export function ReservasClient() {
               {reservations.map((r) => (
                 <Fragment key={r.id}>
                   <tr className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">{r.reference}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {r.reference}
+                      {r.tripGroupId && (
+                        <a
+                          href={`/pt/viagem/${r.tripGroupId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Parte de um pedido de viagem com vários itens — abrir a cotação completa"
+                          className="block text-[11px] font-normal text-orange-600 hover:underline mt-0.5"
+                        >
+                          {reservations.filter((x) => x.tripGroupId === r.tripGroupId).length} itens da viagem
+                        </a>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="text-slate-900">{r.customer.fullName}</p>
                       <p className="text-slate-400 text-xs">{r.customer.phone}</p>

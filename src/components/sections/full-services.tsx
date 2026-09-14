@@ -8,12 +8,18 @@ type FullServicesProps = {
 };
 
 // The corporate profile's own "Nossos Serviços" — a marketing overview of
-// all 8 offerings, four of which are the core catalog types (own admin
-// sections + public pages) and four of which are the ancillary services
-// (AncillaryService catalog type, shown live further down this page).
-// This section is static copy, not database-driven, since it exists to
+// all 8 offerings, four of which are the core catalog types (their own
+// admin sections + public pages) and four of which are the ancillary
+// services (AncillaryService catalog type, shown live on the homepage's
+// #servicos-extras section — those four items link there instead of to
+// /book, so "extra services" actually shows the extra services). This
+// section itself is still static copy, not database-driven — it exists to
 // mirror the source document's scope statement, not to duplicate the
-// ancillary-services booking grid.
+// ancillary-services grid.
+function serviceHref(locale: Locale, href: string): string {
+  return href.startsWith("#") ? `${localizedPath(locale, "/")}${href}` : localizedPath(locale, href);
+}
+
 export function FullServices({ locale, copy }: FullServicesProps) {
   return (
     <div className="px-7 lg:px-28 py-14 lg:py-28 bg-lightbeige">
@@ -29,7 +35,7 @@ export function FullServices({ locale, copy }: FullServicesProps) {
         {copy.items.map((item, i) => (
           <Link
             key={item.title}
-            href={localizedPath(locale, item.href)}
+            href={serviceHref(locale, item.href)}
             className={`rounded-xl p-6 flex flex-col gap-2 border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
               i % 2 === 0 ? "bg-leafy border-leafy text-white" : "bg-white border-darkgray/20 text-textdark"
             }`}

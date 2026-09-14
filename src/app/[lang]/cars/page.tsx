@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Shell } from "@/components/layout/shell";
 import { BookingWithCatalog } from "@/components/sections/booking-with-catalog";
+import type { BookingInitialValues } from "@/components/sections/booking";
 import { Cars, type CarCard } from "@/components/sections/cars";
 import { SectionSkeleton, BookingFormSkeleton } from "@/components/ui/skeleton";
 import { getLocalizedDictionary } from "@/i18n/server";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 type LocalePageProps = {
   params: Promise<{ lang: string }>;
+  searchParams: Promise<{ pickupDate?: string; returnDate?: string }>;
 };
 
 export async function generateMetadata({ params }: LocalePageProps): Promise<Metadata> {
@@ -24,7 +26,15 @@ export async function generateMetadata({ params }: LocalePageProps): Promise<Met
   return dict.metadata.cars;
 }
 
-async function CarsSection({ locale, copy }: { locale: Locale; copy: Dictionary["sections"]["cars"] }) {
+async function CarsSection({
+  locale,
+  copy,
+  bookingDates,
+}: {
+  locale: Locale;
+  copy: Dictionary["sections"]["cars"];
+  bookingDates: { pickupDate?: string; returnDate?: string };
+}) {
   const vehicles = await VehicleService.findAll({ status: "PUBLISHED" });
   const carCards: CarCard[] = vehicles.map((v) => ({
     id: v.id,
@@ -40,13 +50,18 @@ async function CarsSection({ locale, copy }: { locale: Locale; copy: Dictionary[
   }));
 
   if (carCards.length === 0) return null;
-  return <Cars locale={locale} copy={copy} cars={carCards} />;
+  return <Cars locale={locale} copy={copy} cars={carCards} bookingDates={bookingDates} />;
 }
 
-export default async function CarsPage({ params }: LocalePageProps) {
+export default async function CarsPage({ params, searchParams }: LocalePageProps) {
   const { lang } = await params;
+  const { pickupDate, returnDate } = await searchParams;
   const { locale, dict } = getLocalizedDictionary(lang);
   const page = dict.pages.cars;
+
+  const initial: BookingInitialValues | undefined = pickupDate || returnDate
+    ? { tab: "car", date: pickupDate, dateTo: returnDate }
+    : undefined;
 
   return (
     <Shell locale={locale} copy={dict.layout}>
@@ -70,10 +85,10 @@ export default async function CarsPage({ params }: LocalePageProps) {
           />
         }
       >
-        <CarsSection locale={locale} copy={dict.sections.cars} />
+        <CarsSection locale={locale} copy={dict.sections.cars} bookingDates={{ pickupDate, returnDate }} />
       </Suspense>
       <Suspense fallback={<BookingFormSkeleton />}>
-        <BookingWithCatalog locale={locale} copy={dict.sections.booking} />
+        <BookingWithCatalog locale={locale} copy={dict.sections.booking} initial={initial} />
       </Suspense>
     </Shell>
   );

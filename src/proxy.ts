@@ -3,8 +3,8 @@ import { getToken } from "next-auth/jwt";
 import { hasBackofficeAccess } from "@/lib/permissions";
 import { isAllowed, loginRateLimit } from "@/lib/rate-limit";
 
-const locales = ["en", "pt"] as const;
-const defaultLocale = "en";
+const locales = ["pt", "en"] as const;
+const defaultLocale = "pt";
 const localeCookie = "NEXT_LOCALE";
 
 function isLocale(value: string): value is (typeof locales)[number] {

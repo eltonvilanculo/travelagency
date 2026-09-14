@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AnimateIn } from "@/components/ui/animate-in";
+import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { localizedPath, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 
@@ -7,7 +8,7 @@ export type FareCard = {
   from: string;
   to: string;
   highlight: string;
-  price: string;
+  price: number;
   currency: string;
   validity: string;
   badge: string;
@@ -83,8 +84,9 @@ export function PromoFares({ locale, copy, fares }: PromoFaresProps) {
               <div className="mt-auto pt-1">
                 <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">{copy.startingFrom}</p>
                 <p className="text-orange text-2xl font-bold leading-tight">
-                  {fare.currency} {fare.price}
+                  {formatMZN(fare.price, fare.currency, locale)}
                 </p>
+                <p className="text-white/40 text-[11px]">{formatUSDApprox(fare.price, fare.currency, locale)}</p>
                 <p className="text-white/40 text-xs mt-0.5">{copy.perPerson}</p>
               </div>
 

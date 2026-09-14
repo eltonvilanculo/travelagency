@@ -6,7 +6,12 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      role: AdminRole;
+      // Optional and admin-role-less on purpose: this same ambient type is
+      // shared with the customer-facing NextAuth instance
+      // (src/lib/customer-auth.ts), whose sessions never set role and do
+      // set image (the Google profile picture).
+      role?: AdminRole;
+      image?: string | null;
     };
   }
 
@@ -14,7 +19,8 @@ declare module "next-auth" {
     id: string;
     email: string;
     name: string;
-    role: AdminRole;
+    role?: AdminRole;
+    image?: string | null;
   }
 }
 

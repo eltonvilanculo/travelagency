@@ -32,7 +32,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/admin/reservas", label: "Reservas", visible: canManageReservations(role) },
     { href: "/admin/pagamentos", label: "Pagamentos", visible: canManagePayments(role) },
     { href: "/admin/faq", label: "FAQ", visible: canManageFaq(role) },
+    { href: "/admin/clientes", label: "Clientes", visible: canManageUsers(role) },
     { href: "/admin/utilizadores", label: "Utilizadores", visible: canManageUsers(role) },
+    { href: "/admin/auditoria", label: "Auditoria", visible: canManageUsers(role) },
   ].filter((item) => item.visible);
 
   return (

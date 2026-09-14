@@ -61,5 +61,6 @@ Thumbs.db
 
 /playwright-report
 /test-results
+/.playwright-mcp
 
 /src/generated/prisma
