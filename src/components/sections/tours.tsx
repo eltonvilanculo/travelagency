@@ -64,7 +64,10 @@ export function Tours({ locale, copy, tours }: ToursProps) {
 
       {/* Carousel */}
       <div className="relative">
-        <div className="embla__viewport px-7 lg:px-28" ref={emblaRef}>
+        <div
+          className="embla__viewport px-7 lg:px-28 [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)]"
+          ref={emblaRef}
+        >
           <div className="embla__container flex gap-6">
             {tours.map((tour) => (
               <div
@@ -114,7 +117,7 @@ export function Tours({ locale, copy, tours }: ToursProps) {
         {/* Nav arrows */}
         <button
           onClick={() => emblaApi?.scrollPrev()}
-          className="absolute left-2 lg:left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-darkgray flex items-center justify-center hover:bg-orange hover:text-white hover:border-orange transition-all duration-300 z-10"
+          className="absolute left-2 lg:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white border border-darkgray flex items-center justify-center hover:bg-orange hover:text-white hover:border-orange transition-all duration-300 z-10"
           aria-label={copy.previous}
         >
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -123,7 +126,7 @@ export function Tours({ locale, copy, tours }: ToursProps) {
         </button>
         <button
           onClick={() => emblaApi?.scrollNext()}
-          className="absolute right-2 lg:right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-darkgray flex items-center justify-center hover:bg-orange hover:text-white hover:border-orange transition-all duration-300 z-10"
+          className="absolute right-2 lg:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white border border-darkgray flex items-center justify-center hover:bg-orange hover:text-white hover:border-orange transition-all duration-300 z-10"
           aria-label={copy.next}
         >
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -124,7 +124,7 @@ function StatusControl({
           ⋯
         </button>
         {open && (
-          <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+          <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white shadow-lg py-1 origin-top-right animate-dropdown-in">
             {otherOptions.map((s) => (
               <button
                 key={s}
@@ -174,7 +174,7 @@ export function ReservasClient() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"MPESA" | "EMOLA">("MPESA");
+  const [paymentMethod, setPaymentMethod] = useState<"MPESA" | "EMOLA" | "TRANSFER">("MPESA");
   const [walletNumber, setWalletNumber] = useState("");
   const [collectingPayment, setCollectingPayment] = useState(false);
 
@@ -258,13 +258,17 @@ export function ReservasClient() {
   };
 
   const handleCollectPayment = async (id: string) => {
-    if (!walletNumber.trim()) return;
+    if (paymentMethod !== "TRANSFER" && !walletNumber.trim()) return;
     setCollectingPayment(true);
     try {
       const response = await fetch(`/api/admin/reservations/${id}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: paymentMethod, walletNumber: walletNumber.trim() }),
+        body: JSON.stringify(
+          paymentMethod === "TRANSFER"
+            ? { method: paymentMethod }
+            : { method: paymentMethod, walletNumber: walletNumber.trim() }
+        ),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -302,12 +306,12 @@ export function ReservasClient() {
       {error && <div className="mb-4 rounded-lg bg-red-50 text-red-700 text-sm px-4 py-3">{error}</div>}
 
       {loading ? (
-        <p className="text-slate-500 text-sm">A carregar...</p>
+        <p className="text-slate-500 text-sm animate-pulse">A carregar...</p>
       ) : reservations.length === 0 ? (
         <p className="text-slate-500 text-sm">Sem reservas para os filtros selecionados.</p>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
+          <table className="w-full text-sm min-w-[720px]">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">Referência</th>
@@ -351,15 +355,27 @@ export function ReservasClient() {
                       <StatusControl status={r.status} onChange={(s) => handleStatusChange(r.id, s)} />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => setExpandedId(expandedId === r.id ? null : r.id)} className="link-btn">
+                      <button
+                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                        className="link-btn inline-flex items-center gap-1"
+                      >
                         {expandedId === r.id ? "Fechar" : "Detalhes"}
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedId === r.id ? "rotate-180" : ""}`}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                        </svg>
                       </button>
                     </td>
                   </tr>
                   {expandedId === r.id && (
                     <tr>
                       <td colSpan={6} className="bg-slate-50 px-4 py-4">
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-2 gap-6 animate-fade-in">
                           <div>
                             <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Detalhes</p>
                             <dl className="text-sm space-y-1">
@@ -390,18 +406,25 @@ export function ReservasClient() {
                                 <div className="flex gap-2">
                                   <select
                                     value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value as "MPESA" | "EMOLA")}
+                                    onChange={(e) => setPaymentMethod(e.target.value as "MPESA" | "EMOLA" | "TRANSFER")}
                                     className="border border-slate-300 rounded-lg px-2 py-2 text-sm bg-white"
                                   >
                                     <option value="MPESA">M-Pesa</option>
                                     <option value="EMOLA">e-Mola</option>
+                                    <option value="TRANSFER">Transferência</option>
                                   </select>
-                                  <input
-                                    value={walletNumber}
-                                    onChange={(e) => setWalletNumber(e.target.value)}
-                                    placeholder="Número da carteira"
-                                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                                  />
+                                  {paymentMethod === "TRANSFER" ? (
+                                    <p className="flex-1 text-xs text-slate-500 self-center">
+                                      Sem carteira — confirme manualmente quando a transferência chegar.
+                                    </p>
+                                  ) : (
+                                    <input
+                                      value={walletNumber}
+                                      onChange={(e) => setWalletNumber(e.target.value)}
+                                      placeholder="Número da carteira"
+                                      className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                                    />
+                                  )}
                                   <button
                                     onClick={() => handleCollectPayment(r.id)}
                                     disabled={collectingPayment}

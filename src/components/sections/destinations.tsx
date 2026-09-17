@@ -40,7 +40,7 @@ export function Destinations({ copy, items }: DestinationsProps) {
         <div className="flex gap-3 shrink-0">
           <button
             onClick={() => emblaApi?.scrollPrev()}
-            className="w-10 h-10 rounded-full border border-textdark flex items-center justify-center hover:bg-textdark hover:text-white transition-all duration-300"
+            className="w-11 h-11 rounded-full border border-textdark flex items-center justify-center hover:bg-textdark hover:text-white transition-all duration-300"
             aria-label={copy.previous}
           >
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,7 +49,7 @@ export function Destinations({ copy, items }: DestinationsProps) {
           </button>
           <button
             onClick={() => emblaApi?.scrollNext()}
-            className="w-10 h-10 rounded-full border border-textdark flex items-center justify-center hover:bg-textdark hover:text-white transition-all duration-300"
+            className="w-11 h-11 rounded-full border border-textdark flex items-center justify-center hover:bg-textdark hover:text-white transition-all duration-300"
             aria-label={copy.next}
           >
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,7 +60,10 @@ export function Destinations({ copy, items }: DestinationsProps) {
       </div>
 
       {/* Carousel */}
-      <div className="embla__viewport" ref={emblaRef}>
+      <div
+        className="embla__viewport [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)]"
+        ref={emblaRef}
+      >
         <div className="embla__container flex gap-4">
           {items.map((d) => (
             <div

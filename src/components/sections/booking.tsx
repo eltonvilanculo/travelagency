@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useSession, signIn } from "next-auth/react";
 import { CitySelect } from "@/components/ui/city-select";
+import { GoogleLogo, FacebookLogo } from "@/components/ui/social-logos";
 import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { useTrip, type TripItem } from "@/lib/trip-context";
 import type { Dictionary } from "@/i18n/types";
@@ -147,7 +149,10 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
   const [packageId, setPackageId] = useState(
     (initial?.tab === "package" && initial?.itemId) || packages[0]?.id || ""
   );
-  const [packagePassengers, setPackagePassengers] = useState(1);
+  // Packages are a fixed product, not priced per headcount from this form
+  // — always one unit; a group covers itself by adding the package again
+  // (stacking), not by a passenger count on one line.
+  const packagePassengers = 1;
 
   const [serviceItemId, setServiceItemId] = useState(
     (initial?.tab === "service" && initial?.itemId) || services[0]?.id || ""
@@ -159,16 +164,14 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
   const selectedPackage = packages.find((p) => p.id === packageId);
   const selectedService = services.find((s) => s.id === serviceItemId);
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [remarks, setRemarks] = useState("");
-
   const [quote, setQuote] = useState<QuoteState>({ status: "idle" });
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
 
-  const { items: tripItems, addItem, open: openTrip } = useTrip();
+  const { items: tripItems, addItem, open: openTrip, contact, setContact } = useTrip();
+  const { fullName, phone, email, remarks } = contact;
   const [justAdded, setJustAdded] = useState(false);
+
+  const { data: session, status: sessionStatus } = useSession();
 
   const tabs: { id: ServiceTab; label: string; Icon: () => React.ReactElement }[] = [
     { id: "flight", label: copy.tabs.flight, Icon: PlaneIcon },
@@ -244,6 +247,16 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
     // the same person while the first one is still in flight.
     if (submit.status === "loading") return;
 
+    // Package has no direct-submit path any more — nothing left to
+    // customize, so it only ever goes through "Adicionar à Minha Viagem".
+    // This is a safety net for the (browser-dependent) case of an Enter
+    // keypress implicitly submitting the form; the normal path never
+    // renders a submit button on this tab in the first place.
+    if (activeTab === "package") {
+      handleAddToTrip();
+      return;
+    }
+
     if (activeTab === "flight" && origin && destinationCity && origin === destinationCity) {
       setFlightCityError(true);
       return;
@@ -264,6 +277,19 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
     }
     setDateError(false);
 
+    // Account creation is mandatory to submit — but every field above is
+    // already saved in TripProvider's contact state (localStorage), so the
+    // OAuth round-trip doesn't lose what was typed. Only this tab's own
+    // selection (dates/hotel/etc, not yet part of a trip item) would need
+    // re-entry after the redirect back. This is a fallback only (e.g.
+    // Enter key in a text field) — the normal path is one of the two
+    // provider-specific buttons rendered below, which call signIn
+    // directly and never reach here.
+    if (!session?.user) {
+      signIn();
+      return;
+    }
+
     setSubmit({ status: "loading" });
 
     let payload: Record<string, unknown>;
@@ -277,12 +303,11 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
       case "car":
         payload = { serviceType: "CAR", itemId: vehicleId, days: carDays };
         break;
-      case "package":
-        payload = { serviceType: "PACKAGE", itemId: packageId, passengers: packagePassengers };
-        break;
       case "service":
         payload = { serviceType: "SERVICE", itemId: serviceItemId, quantity: serviceQuantity };
         break;
+      default:
+        return;
     }
 
     payload.locale = locale;
@@ -424,6 +449,14 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
     setTimeout(() => setJustAdded(false), 2000);
   };
 
+  // Auto-reload after a successful submission — long enough to read/copy
+  // the reference, then resets to a clean form automatically instead of
+  // waiting for a manual "novo pedido" click.
+  useEffect(() => {
+    if (submit.status !== "success") return;
+    const timer = setTimeout(() => window.location.reload(), 8000);
+    return () => clearTimeout(timer);
+  }, [submit.status]);
 
   if (submit.status === "success") {
     return (
@@ -437,7 +470,8 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
           <h2 className="text-2xl md:text-3xl mb-3">{copy.status.successTitle}</h2>
           <p className="text-white/60 text-sm mb-6">{copy.status.successBody}</p>
           <p className="text-white/40 text-xs uppercase tracking-wide mb-1">{copy.status.reference}</p>
-          <p className="text-orange text-xl font-semibold mb-8">{submit.reference}</p>
+          <p className="text-orange text-xl font-semibold mb-4">{submit.reference}</p>
+          <p className="text-white/50 text-xs leading-relaxed mb-8 max-w-sm mx-auto">{copy.status.transferHint}</p>
           <button
             type="button"
             onClick={() => setSubmit({ status: "idle" })}
@@ -445,6 +479,7 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
           >
             {copy.status.newRequest}
           </button>
+          <p className="text-white/30 text-[11px] mt-6">{copy.status.reloadNotice}</p>
         </div>
       </div>
     );
@@ -476,25 +511,25 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
           </h2>
           <p className="text-white/50 text-sm mb-8">{copy.description}</p>
 
-          <div className="flex gap-1 mb-8 p-1 bg-white/10 rounded-xl flex-wrap">
+          <div className="flex gap-1 mb-8 p-1 bg-white/10 rounded-xl">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-[70px] inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs uppercase font-semibold tracking-wide transition-all duration-300 cursor-pointer ${
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 py-3 sm:py-2.5 rounded-lg text-xs uppercase font-semibold tracking-wide transition-all duration-300 cursor-pointer ${
                   activeTab === tab.id ? "bg-orange text-white shadow" : "text-white/60 hover:text-white"
                 }`}
               >
                 <tab.Icon />
-                {tab.label}
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
           </div>
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             {activeTab === "flight" && (
-              <>
+              <div className="flex flex-col gap-4 animate-fade-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>{copy.labels.from}</label>
@@ -518,7 +553,7 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                   </div>
                 </div>
                 {flightCityError && (
-                  <p className="text-red-300 text-xs -mt-2">{copy.errors.sameCity}</p>
+                  <p className="text-red-300 text-xs -mt-2 animate-settle-in">{copy.errors.sameCity}</p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -530,7 +565,7 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                     <input type="date" min={departureDate || today} value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className={inputClass} />
                   </div>
                 </div>
-                {dateError && <p className="text-red-300 text-xs -mt-2">{copy.errors.invalidDates}</p>}
+                {dateError && <p className="text-red-300 text-xs -mt-2 animate-settle-in">{copy.errors.invalidDates}</p>}
                 <div>
                   <label className={labelClass}>{copy.labels.passengers}</label>
                   <select value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} className={inputClass + " bg-leafy"}>
@@ -540,11 +575,11 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                   </select>
                 </div>
                 <p className="text-white/40 text-xs">{copy.price.quoteOnRequest}</p>
-              </>
+              </div>
             )}
 
             {activeTab === "hotel" && (
-              <>
+              <div className="flex flex-col gap-4 animate-fade-in">
                 <div>
                   <label className={labelClass}>{copy.labels.selectHotel}</label>
                   <select required value={hotelId} onChange={(e) => setHotelId(e.target.value)} className={inputClass + " bg-leafy"}>
@@ -564,7 +599,7 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                     <input required type="date" min={checkIn || today} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className={inputClass} />
                   </div>
                 </div>
-                {dateError && <p className="text-red-300 text-xs -mt-2">{copy.errors.invalidDates}</p>}
+                {dateError && <p className="text-red-300 text-xs -mt-2 animate-settle-in">{copy.errors.invalidDates}</p>}
                 <div>
                   <label className={labelClass}>{copy.labels.rooms}</label>
                   <select value={rooms} onChange={(e) => setRooms(Number(e.target.value))} className={inputClass + " bg-leafy"}>
@@ -573,11 +608,11 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                     ))}
                   </select>
                 </div>
-              </>
+              </div>
             )}
 
             {activeTab === "car" && (
-              <>
+              <div className="flex flex-col gap-4 animate-fade-in">
                 <div>
                   <label className={labelClass}>{copy.labels.selectVehicle}</label>
                   <select required value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className={inputClass + " bg-leafy"}>
@@ -597,12 +632,12 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                     <input required type="date" min={pickupDate || today} value={carReturnDate} onChange={(e) => setCarReturnDate(e.target.value)} className={inputClass} />
                   </div>
                 </div>
-                {dateError && <p className="text-red-300 text-xs -mt-2">{copy.errors.invalidDates}</p>}
-              </>
+                {dateError && <p className="text-red-300 text-xs -mt-2 animate-settle-in">{copy.errors.invalidDates}</p>}
+              </div>
             )}
 
             {activeTab === "package" && (
-              <>
+              <div className="flex flex-col gap-4 animate-fade-in">
                 <div>
                   <label className={labelClass}>{copy.labels.selectPackage}</label>
                   <select required value={packageId} onChange={(e) => setPackageId(e.target.value)} className={inputClass + " bg-leafy"}>
@@ -627,19 +662,12 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                     </ul>
                   </div>
                 )}
-                <div>
-                  <label className={labelClass}>{copy.labels.passengers}</label>
-                  <select value={packagePassengers} onChange={(e) => setPackagePassengers(Number(e.target.value))} className={inputClass + " bg-leafy"}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                      <option key={n} value={n}>{countLabel(n, copy.passengers.singular, copy.passengers.plural)}</option>
-                    ))}
-                  </select>
-                </div>
-              </>
+                <p className="text-white/40 text-xs">{copy.price.packageStackHint}</p>
+              </div>
             )}
 
             {activeTab === "service" && (
-              <>
+              <div className="flex flex-col gap-4 animate-fade-in">
                 <div>
                   <label className={labelClass}>{copy.labels.selectService}</label>
                   <select required value={serviceItemId} onChange={(e) => setServiceItemId(e.target.value)} className={inputClass + " bg-leafy"}>
@@ -662,21 +690,25 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
                 {selectedService?.price == null && (
                   <p className="text-white/40 text-xs">{copy.price.quoteOnRequest}</p>
                 )}
-              </>
+              </div>
             )}
 
             {/* Live price */}
             {activeTab !== "flight" && !(activeTab === "service" && selectedService?.price == null) && (
               <div className="rounded-lg bg-white/5 border border-white/10 px-4 py-3 flex items-center justify-between">
                 <span className="text-white/50 text-xs uppercase tracking-wide">{copy.price.estimate}</span>
-                {quote.status === "loading" && <span className="text-white/40 text-sm">{copy.price.calculating}</span>}
+                {quote.status === "loading" && (
+                  <span key="loading" className="text-white/40 text-sm animate-fade-in">{copy.price.calculating}</span>
+                )}
                 {quote.status === "ready" && (
-                  <div className="text-right">
+                  <div key={`${quote.total}-${quote.currency}`} className="text-right animate-fade-in">
                     <span className="text-orange font-bold text-lg block">{formatMZN(quote.total, quote.currency, locale)}</span>
                     <span className="text-white/40 text-[11px]">{formatUSDApprox(quote.total, quote.currency, locale)}</span>
                   </div>
                 )}
-                {quote.status === "error" && <span className="text-red-300 text-xs">{quote.message}</span>}
+                {quote.status === "error" && (
+                  <span key="error" className="text-red-300 text-xs animate-fade-in">{quote.message}</span>
+                )}
                 {quote.status === "idle" && <span className="text-white/30 text-sm">—</span>}
               </div>
             )}
@@ -687,23 +719,23 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
               <div className="flex flex-col gap-4">
                 <div>
                   <label className={labelClass}>{copy.labels.fullName}</label>
-                  <input required type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={copy.placeholders.fullName} className={inputClass} />
+                  <input required type="text" value={fullName} onChange={(e) => setContact({ fullName: e.target.value })} placeholder={copy.placeholders.fullName} className={inputClass} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>{copy.labels.phone}</label>
-                    <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={copy.placeholders.phone} className={inputClass} />
+                    <input required type="tel" value={phone} onChange={(e) => setContact({ phone: e.target.value })} placeholder={copy.placeholders.phone} className={inputClass} />
                   </div>
                   <div>
                     <label className={labelClass}>{copy.labels.email}</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={copy.placeholders.email} className={inputClass} />
+                    <input type="email" value={email} onChange={(e) => setContact({ email: e.target.value })} placeholder={copy.placeholders.email} className={inputClass} />
                   </div>
                 </div>
                 <div>
                   <label className={labelClass}>{copy.labels.remarks}</label>
                   <textarea
                     value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
+                    onChange={(e) => setContact({ remarks: e.target.value })}
                     placeholder={copy.placeholders.remarks}
                     rows={2}
                     className={inputClass}
@@ -713,36 +745,89 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
             </div>
 
             {submit.status === "error" && (
-              <p className="text-red-300 text-sm text-center">{submit.message}</p>
+              <p className="text-red-300 text-sm text-center animate-settle-in">{submit.message}</p>
             )}
 
-            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
-              <p className="text-white/60 text-xs leading-relaxed">{copy.addToTripHint}</p>
+            {activeTab === "package" ? (
+              // Nothing left to customize on this tab — one action, straight
+              // into Minha Viagem (which opens automatically on add).
               <button
                 type="button"
                 onClick={handleAddToTrip}
-                className="bg-white/15 hover:bg-white/25 text-white rounded-3xl px-4 py-2.5 uppercase text-xs font-semibold transition-all duration-300 cursor-pointer whitespace-nowrap shrink-0 inline-flex items-center gap-2"
+                className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-8 py-3 uppercase text-sm font-semibold transition-all duration-300 w-full cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                {justAdded ? copy.addedToTrip : copy.addToTrip}
+                {justAdded ? copy.addedToTrip : copy.packageCta}
                 {tripItems.length > 0 && (
-                  <span className="bg-orange text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center normal-case">
+                  <span
+                    key={tripItems.length}
+                    className={`bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center normal-case ${justAdded ? "animate-pop" : ""}`}
+                  >
                     {tripItems.length}
                   </span>
                 )}
               </button>
-            </div>
+            ) : (
+              <>
+                <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
+                  <p className="text-white/60 text-xs leading-relaxed">{copy.addToTripHint}</p>
+                  <button
+                    type="button"
+                    onClick={handleAddToTrip}
+                    className="bg-white/15 hover:bg-white/25 text-white rounded-3xl px-4 py-2.5 uppercase text-xs font-semibold transition-all duration-300 cursor-pointer whitespace-nowrap shrink-0 inline-flex items-center gap-2"
+                  >
+                    {justAdded ? copy.addedToTrip : copy.addToTrip}
+                    {tripItems.length > 0 && (
+                      <span
+                        key={tripItems.length}
+                        className={`bg-orange text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center normal-case ${justAdded ? "animate-pop" : ""}`}
+                      >
+                        {tripItems.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
 
-            <button
-              type="submit"
-              disabled={submit.status === "loading"}
-              className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-8 py-3 uppercase text-sm font-semibold transition-all duration-300 w-full cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {submit.status === "loading" ? copy.status.submitting : copy.submit}
-            </button>
+                {session?.user ? (
+                  <button
+                    type="submit"
+                    disabled={submit.status === "loading"}
+                    className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-8 py-3 uppercase text-sm font-semibold transition-all duration-300 w-full cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {submit.status === "loading" ? copy.status.submitting : copy.submit}
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => signIn("google")}
+                      disabled={sessionStatus === "loading"}
+                      className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-6 py-2 uppercase text-sm font-semibold transition-all duration-300 w-full cursor-pointer disabled:opacity-60 flex items-center justify-center gap-3"
+                    >
+                      <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0">
+                        <GoogleLogo className="w-4 h-4" />
+                      </span>
+                      {copy.status.signInGoogle}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => signIn("facebook")}
+                      disabled={sessionStatus === "loading"}
+                      className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white rounded-3xl px-6 py-2 uppercase text-sm font-semibold transition-all duration-300 w-full cursor-pointer disabled:opacity-60 flex items-center justify-center gap-3"
+                    >
+                      <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0">
+                        <FacebookLogo className="w-4 h-4" />
+                      </span>
+                      {copy.status.signInFacebook}
+                    </button>
+                    <p className="text-center text-white/40 text-xs">{copy.status.accountRequired}</p>
+                  </div>
+                )}
+              </>
+            )}
             <p className="text-center text-white/30 text-xs">{copy.note}</p>
             {tripItems.length > 0 && (
               <button type="button" onClick={openTrip} className="text-center text-orange text-xs underline cursor-pointer">
-                {copy.viewTrip.replace("{count}", String(tripItems.length))}
+                {tripItems.length === 1 ? copy.viewTripOne : copy.viewTrip.replace("{count}", String(tripItems.length))}
               </button>
             )}
           </form>

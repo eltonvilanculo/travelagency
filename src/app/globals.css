@@ -108,6 +108,53 @@ body {
   animation: shimmer-sweep 2.8s linear infinite;
 }
 
+/* ─── Small, restrained UI-feedback transitions (deliberately short —
+   these accompany routine state changes like a recalculated price or a
+   validation message, not hero-style entrances) ─── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.18s ease-out both;
+}
+
+@keyframes settle-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.animate-settle-in {
+  animation: settle-in 0.18s ease-out both;
+}
+
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+.animate-drop-in {
+  animation: drop-in 0.32s ease-out both;
+}
+
+@keyframes pop {
+  0%   { transform: scale(1);    }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1);    }
+}
+.animate-pop {
+  animation: pop 0.22s ease-out both;
+}
+
+/* Small dense dropdown/overflow menus (admin status control, etc.) —
+ * quicker and smaller-travel than .animate-drop-in, which is for
+ * page-level banners. */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0);        }
+}
+.animate-dropdown-in {
+  animation: dropdown-in 0.14s ease-out both;
+}
+
 /* ─── Live offer dot ─── */
 @keyframes live-pulse {
   0%, 100% { opacity: 1;   transform: scale(1);   }

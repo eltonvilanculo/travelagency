@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AnimateIn } from "@/components/ui/animate-in";
 import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { localizedPath, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
@@ -66,10 +67,10 @@ export function Hotels({ locale, copy, hotels, bookingDates }: HotelsProps) {
 
       {/* Hotel cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {hotels.map((hotel) => (
+        {hotels.map((hotel, index) => (
+          <AnimateIn key={hotel.id} delay={Math.min(index, 4) * 120}>
           <div
-            key={hotel.id}
-            className="bg-white rounded-2xl border border-darkgray/20 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
+            className="group bg-white rounded-2xl border border-darkgray/20 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full"
           >
             {/* Image */}
             <div className="relative h-44 overflow-hidden">
@@ -79,6 +80,7 @@ export function Hotels({ locale, copy, hotels, bookingDates }: HotelsProps) {
                 fill
                 sizes="(max-width: 768px) 100vw, 25vw"
                 className="object-cover group-hover:scale-105 transition-all duration-500"
+                priority={index === 0}
               />
               {/* Stars overlay */}
               <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
@@ -125,6 +127,7 @@ export function Hotels({ locale, copy, hotels, bookingDates }: HotelsProps) {
               </div>
             </div>
           </div>
+          </AnimateIn>
         ))}
       </div>
     </div>

@@ -356,12 +356,12 @@ export function HoteisClient() {
       )}
 
       {loading ? (
-        <p className="text-slate-500 text-sm">A carregar...</p>
+        <p className="text-slate-500 text-sm animate-pulse">A carregar...</p>
       ) : hotels.length === 0 ? (
         <p className="text-slate-500 text-sm">Ainda sem hotéis.</p>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">Nome</th>
