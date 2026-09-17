@@ -7,6 +7,7 @@ import { useTrip } from "@/lib/trip-context";
 import { GoogleLogo, FacebookLogo } from "@/components/ui/social-logos";
 import { analyzeTripWarnings, type TripWarning } from "@/lib/trip-warnings";
 import { formatMZN, formatUSDApprox } from "@/lib/currency";
+import { PaymentPanel } from "@/components/trip/payment-panel";
 import type { Locale } from "@/i18n/config";
 
 const COPY = {
@@ -84,11 +85,13 @@ const TripIcon = () => (
   </svg>
 );
 
+type SubmittedItem = { id: string; itemName: string; total: number | null; currency: string | null };
+
 type SubmitState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "success"; tripGroupId: string; quoteUrl: string };
+  | { status: "success"; tripGroupId: string; quoteUrl: string; items: SubmittedItem[] };
 
 export function TripDrawer({ locale }: { locale: Locale }) {
   const t = COPY[locale];
@@ -131,12 +134,16 @@ export function TripDrawer({ locale }: { locale: Locale }) {
 
   // Auto-reload after a successful submission — long enough to read/copy
   // the reference and click the quote link (opens in a new tab, so the
-  // reload here doesn't interrupt it), then resets to a clean form.
+  // reload here doesn't interrupt it), then resets to a clean form. Skipped
+  // whenever there's a "Pagar agora" panel on screen — a blind reload while
+  // someone is mid-way through typing their Mpesa number would wipe the
+  // form; the "Começar nova viagem" button covers the same reset manually.
+  const hasPayableItems = submit.status === "success" && submit.items.some((i) => i.total != null && i.currency != null);
   useEffect(() => {
-    if (submit.status !== "success") return;
+    if (submit.status !== "success" || hasPayableItems) return;
     const timer = setTimeout(() => window.location.reload(), 8000);
     return () => clearTimeout(timer);
-  }, [submit.status]);
+  }, [submit.status, hasPayableItems]);
 
   const warningKey = (w: TripWarning) => `${w.type}-${w.localId}`;
   const warnings = useMemo(() => analyzeTripWarnings(items), [items]);
@@ -207,7 +214,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
         setSubmit({ status: "error", message: data.error || t.errorGeneric });
         return;
       }
-      setSubmit({ status: "success", tripGroupId: data.tripGroupId, quoteUrl: data.quoteUrl });
+      setSubmit({ status: "success", tripGroupId: data.tripGroupId, quoteUrl: data.quoteUrl, items: data.items ?? [] });
       clear();
     } catch {
       setSubmit({ status: "error", message: t.errorGeneric });
@@ -220,12 +227,14 @@ export function TripDrawer({ locale }: { locale: Locale }) {
         <button
           type="button"
           onClick={open}
-          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 bg-leafy text-white rounded-full pl-3 pr-4 py-2.5 sm:pl-4 sm:pr-5 sm:py-3 flex items-center gap-2 shadow-xl hover:bg-leafy/90 transition-all duration-300 cursor-pointer"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 bg-leafy text-white rounded-full pl-3 pr-4 py-2.5 sm:pl-4 sm:pr-5 sm:py-3 flex items-center gap-2 shadow-xl hover:bg-leafy/90 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer animate-pop"
         >
           <TripIcon />
           <span className="text-sm font-semibold">{t.trigger}</span>
           {items.length > 0 && (
-            <span className="bg-orange text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{items.length}</span>
+            <span key={items.length} className="bg-orange text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pop">
+              {items.length}
+            </span>
           )}
         </button>
       )}
@@ -251,8 +260,8 @@ export function TripDrawer({ locale }: { locale: Locale }) {
             </div>
 
             {submit.status === "success" ? (
-              <div className="p-6 flex-1 flex flex-col items-center text-center justify-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-orange/10 text-orange flex items-center justify-center">
+              <div className="p-6 flex-1 overflow-y-auto flex flex-col items-center text-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-orange/10 text-orange flex items-center justify-center shrink-0">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-7 h-7">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
@@ -260,6 +269,36 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                 <h3 className="text-textdark text-xl">{t.successTitle}</h3>
                 <p className="text-parablack text-sm">{t.successBody}</p>
                 <p className="text-darkgray text-xs leading-relaxed max-w-[260px]">{t.transferHint}</p>
+
+                {hasPayableItems && (
+                  <div className="w-full flex flex-col gap-3 items-center">
+                    <div className="w-full max-w-sm bg-white rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.06)] border border-darkgray/10 px-4 py-3 flex items-center justify-between">
+                      <span className="text-darkgray text-xs uppercase tracking-wide">{t.total}</span>
+                      <div className="text-right">
+                        <span className="block text-orange font-bold">
+                          {formatMZN(
+                            submit.items.reduce((sum, item) => (item.total != null ? sum + item.total : sum), 0),
+                            "MZN",
+                            locale
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    {submit.items
+                      .filter((item) => item.total != null && item.currency != null)
+                      .map((item) => (
+                        <PaymentPanel
+                          key={item.id}
+                          reservationId={item.id}
+                          itemName={item.itemName}
+                          amount={item.total as number}
+                          currency={item.currency as string}
+                          locale={locale}
+                        />
+                      ))}
+                  </div>
+                )}
+
                 <Link
                   href={submit.quoteUrl}
                   target="_blank"
@@ -274,7 +313,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                 >
                   {t.newTrip}
                 </button>
-                <p className="text-darkgray/60 text-[11px]">{t.reloadNotice}</p>
+                {!hasPayableItems && <p className="text-darkgray/60 text-[11px]">{t.reloadNotice}</p>}
               </div>
             ) : (
               <>
@@ -329,9 +368,14 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                 </div>
 
                 {items.length > 0 && (
-                  <form onSubmit={handleSubmit} className="border-t border-darkgray/15 p-6 flex flex-col gap-3 shrink-0">
+                  <>
+                    {/* Raised above the scrollable item list rather than
+                        buried inside the form — reads as a running total
+                        that "lifts" into view, and pulling it out of the
+                        form gives the item list itself more of the
+                        drawer's height. */}
                     {hasAnyPrice && (
-                      <div className="flex items-center justify-between pb-2">
+                      <div className="shrink-0 mx-4 relative z-10 bg-white rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.06)] border border-darkgray/10 border-b-0 px-4 py-3 flex items-center justify-between">
                         <span className="text-darkgray text-xs uppercase tracking-wide">{t.total}</span>
                         <div className="text-right">
                           <span className="block text-orange font-bold">{formatMZN(grandTotal, currency, locale)}</span>
@@ -340,6 +384,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                       </div>
                     )}
 
+                    <form onSubmit={handleSubmit} className="border-t border-darkgray/15 p-6 flex flex-col gap-3 shrink-0">
                     <input required value={contact.fullName} onChange={(e) => setContact({ fullName: e.target.value })} placeholder={t.fullName} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
                     <input required type="tel" value={contact.phone} onChange={(e) => setContact({ phone: e.target.value })} placeholder={t.phone} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
                     <input type="email" value={contact.email} onChange={(e) => setContact({ email: e.target.value })} placeholder={t.email} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
@@ -389,7 +434,8 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                         t.accountRequired
                       )}
                     </p>
-                  </form>
+                    </form>
+                  </>
                 )}
               </>
             )}

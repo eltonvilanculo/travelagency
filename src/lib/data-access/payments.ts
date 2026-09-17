@@ -12,11 +12,17 @@ export type InitiateReservationPaymentInput = {
 };
 
 export class PaymentService {
-  /** Agent-triggered: reservation has a quote, customer is ready to pay.
+  /** Either an agent (RF-026: -> AWAITING_PAYMENT) or the customer
+   * themselves, paying online for their own already-quoted reservation.
    * Creates (or reuses) the Payment row, calls the Payen gateway adapter,
-   * and moves the reservation into the payment part of RF-026's flow. The
-   * full wallet number lives only in this function's stack — it's masked
-   * before anything touches the database.
+   * and moves the reservation into the payment part of the flow. The full
+   * wallet number lives only in this function's stack — it's masked before
+   * anything touches the database.
+   *
+   * actorId is null for a customer self-service payment — AuditLog.actorId
+   * and Reservation.agentId are both FK'd to AdminUser, so there is no
+   * "customer" value to put there; `agentId` is simply left untouched in
+   * that case rather than overwritten with something invalid.
    *
    * Idempotency: the Payment row's own id is created *before* the gateway
    * is ever called, and is reused as Payen's externalRequestId AND
@@ -25,7 +31,7 @@ export class PaymentService {
    * row already exists for this reservation instead of creating a new
    * one — Payen itself also treats a repeated idempotency key as "return
    * the existing result", so this is defense in depth, not the only guard. */
-  static async initiateForReservation(input: InitiateReservationPaymentInput, actorId: string) {
+  static async initiateForReservation(input: InitiateReservationPaymentInput, actorId: string | null) {
     const reservation = await prisma.reservation.findUnique({ where: { id: input.reservationId } });
     if (!reservation) return { ok: false as const, reason: "not_found" as const };
     if (!reservation.quotedPrice || !reservation.quotedCurrency) {
@@ -102,7 +108,7 @@ export class PaymentService {
 
     await prisma.reservation.update({
       where: { id: reservation.id },
-      data: { status: "AWAITING_PAYMENT", agentId: actorId },
+      data: { status: "AWAITING_PAYMENT", ...(actorId ? { agentId: actorId } : {}) },
     });
 
     return { ok: true as const, payment: updated };
@@ -114,6 +120,13 @@ export class PaymentService {
       include: {
         reservation: { include: { customer: true, agent: { select: SAFE_ADMIN_SELECT } } },
       },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  static async findLatestForReservation(reservationId: string) {
+    return prisma.payment.findFirst({
+      where: { reservationId },
       orderBy: { createdAt: "desc" },
     });
   }

@@ -108,8 +108,10 @@ export function Hotels({ locale, copy, hotels, bookingDates }: HotelsProps) {
                 ))}
               </div>
 
-              {/* Price + CTA */}
-              <div className="flex items-center justify-between pt-3 border-t border-shadow mt-2">
+              {/* Price + CTA — stacked, not side-by-side: at narrower card
+                  widths a side-by-side row squeezed the pill button
+                  (2-line text) right on top of the price digits. */}
+              <div className="flex flex-col gap-3 pt-3 border-t border-shadow mt-2">
                 <div>
                   <p className="text-xs text-darkgray">{copy.from}</p>
                   <p className="text-orange font-bold text-lg">
@@ -120,7 +122,7 @@ export function Hotels({ locale, copy, hotels, bookingDates }: HotelsProps) {
                 </div>
                 <Link
                   href={`${localizedPath(locale, "/book")}?type=hotel&id=${hotel.id}${dateQuery ? `&${dateQuery}` : ""}`}
-                  className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-4 py-2 text-xs font-semibold uppercase transition-all duration-300"
+                  className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-4 py-2.5 text-xs font-semibold uppercase text-center transition-all duration-300"
                 >
                   {copy.checkAvailability}
                 </Link>

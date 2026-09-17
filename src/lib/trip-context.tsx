@@ -59,6 +59,13 @@ type TripContextValue = {
   close: () => void;
   contact: TripContact;
   setContact: (patch: Partial<TripContact>) => void;
+  /** Shared with FaqChat so the trip drawer and the chat widget never sit
+   * open on top of each other — both are fixed bottom-right panels, and
+   * having each own its open state independently meant one could cover
+   * the other's trigger/content with no way to tell they were both live. */
+  chatOpen: boolean;
+  openChat: () => void;
+  closeChat: () => void;
 };
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -67,6 +74,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<TripItem[]>([]);
   const [contact, setContactState] = useState<TripContact>(EMPTY_CONTACT);
   const [isOpen, setIsOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // Hydrate from localStorage after mount only — reading it during render
@@ -113,6 +121,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback((item: Omit<TripItem, "localId">) => {
     setItems((prev) => [...prev, { ...item, localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }]);
     setIsOpen(true);
+    setChatOpen(false);
   }, []);
 
   const removeItem = useCallback((localId: string) => {
@@ -120,15 +129,23 @@ export function TripProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback(() => setItems([]), []);
-  const open = useCallback(() => setIsOpen(true), []);
+  const open = useCallback(() => {
+    setIsOpen(true);
+    setChatOpen(false);
+  }, []);
   const close = useCallback(() => setIsOpen(false), []);
+  const openChat = useCallback(() => {
+    setChatOpen(true);
+    setIsOpen(false);
+  }, []);
+  const closeChat = useCallback(() => setChatOpen(false), []);
   const setContact = useCallback((patch: Partial<TripContact>) => {
     setContactState((prev) => ({ ...prev, ...patch }));
   }, []);
 
   const value = useMemo(
-    () => ({ items, addItem, removeItem, clear, isOpen, open, close, contact, setContact }),
-    [items, addItem, removeItem, clear, isOpen, open, close, contact, setContact]
+    () => ({ items, addItem, removeItem, clear, isOpen, open, close, contact, setContact, chatOpen, openChat, closeChat }),
+    [items, addItem, removeItem, clear, isOpen, open, close, contact, setContact, chatOpen, openChat, closeChat]
   );
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;

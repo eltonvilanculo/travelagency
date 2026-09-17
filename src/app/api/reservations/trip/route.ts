@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
             ? `${sourceItem.origin} → ${sourceItem.destinationCity}`
             : await getItemDisplayName(sourceItem.serviceType, sourceItem.itemId!, input.locale);
         return {
+          id: reservation.id,
           reference: reservation.reference,
           itemName,
           total: quote?.total ?? null,

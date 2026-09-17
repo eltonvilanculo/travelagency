@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
+        id: reservation.id,
         reference: reservation.reference,
         itemName,
         quote,

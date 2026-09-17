@@ -7,6 +7,8 @@ import { CitySelect } from "@/components/ui/city-select";
 import { GoogleLogo, FacebookLogo } from "@/components/ui/social-logos";
 import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import { useTrip, type TripItem } from "@/lib/trip-context";
+import { PaymentPanel } from "@/components/trip/payment-panel";
+import { FaqInline } from "@/components/faq/faq-inline";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 
@@ -106,7 +108,7 @@ type SubmitState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "success"; reference: string };
+  | { status: "success"; id: string; reference: string; itemName: string; total: number | null; currency: string | null };
 
 export function Booking({ locale, copy, hotels, vehicles, packages, services, initial }: BookingProps) {
   const today = todayStr();
@@ -325,7 +327,14 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
         setSubmit({ status: "error", message: data.error || copy.status.errorTitle });
         return;
       }
-      setSubmit({ status: "success", reference: data.reference });
+      setSubmit({
+        status: "success",
+        id: data.id,
+        reference: data.reference,
+        itemName: data.itemName,
+        total: data.quote?.total ?? null,
+        currency: data.quote?.currency ?? null,
+      });
     } catch {
       setSubmit({ status: "error", message: copy.status.errorTitle });
     }
@@ -451,12 +460,14 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
 
   // Auto-reload after a successful submission — long enough to read/copy
   // the reference, then resets to a clean form automatically instead of
-  // waiting for a manual "novo pedido" click.
+  // waiting for a manual "novo pedido" click. Skipped when there's a "Pagar
+  // agora" panel on screen — see the identical guard in trip-drawer.tsx.
+  const isPayable = submit.status === "success" && submit.total != null && submit.currency != null;
   useEffect(() => {
-    if (submit.status !== "success") return;
+    if (submit.status !== "success" || isPayable) return;
     const timer = setTimeout(() => window.location.reload(), 8000);
     return () => clearTimeout(timer);
-  }, [submit.status]);
+  }, [submit.status, isPayable]);
 
   if (submit.status === "success") {
     return (
@@ -472,6 +483,19 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
           <p className="text-white/40 text-xs uppercase tracking-wide mb-1">{copy.status.reference}</p>
           <p className="text-orange text-xl font-semibold mb-4">{submit.reference}</p>
           <p className="text-white/50 text-xs leading-relaxed mb-8 max-w-sm mx-auto">{copy.status.transferHint}</p>
+
+          {isPayable && (
+            <div className="mb-8 flex justify-center">
+              <PaymentPanel
+                reservationId={submit.id}
+                itemName={submit.itemName}
+                amount={submit.total as number}
+                currency={submit.currency as string}
+                locale={locale}
+              />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setSubmit({ status: "idle" })}
@@ -479,7 +503,7 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
           >
             {copy.status.newRequest}
           </button>
-          <p className="text-white/30 text-[11px] mt-6">{copy.status.reloadNotice}</p>
+          {!isPayable && <p className="text-white/30 text-[11px] mt-6">{copy.status.reloadNotice}</p>}
         </div>
       </div>
     );
@@ -693,10 +717,12 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
               </div>
             )}
 
-            {/* Live price */}
+            {/* Live price — orange-tinted rather than the same faint
+                white/5 as every other panel here, so the number that
+                actually matters before submitting stands out. */}
             {activeTab !== "flight" && !(activeTab === "service" && selectedService?.price == null) && (
-              <div className="rounded-lg bg-white/5 border border-white/10 px-4 py-3 flex items-center justify-between">
-                <span className="text-white/50 text-xs uppercase tracking-wide">{copy.price.estimate}</span>
+              <div className="rounded-lg bg-orange/10 border border-orange/25 px-4 py-3 flex items-center justify-between">
+                <span className="text-white/70 text-xs uppercase tracking-wide font-medium">{copy.price.estimate}</span>
                 {quote.status === "loading" && (
                   <span key="loading" className="text-white/40 text-sm animate-fade-in">{copy.price.calculating}</span>
                 )}
@@ -832,6 +858,13 @@ export function Booking({ locale, copy, hotels, vehicles, packages, services, in
             )}
           </form>
         </div>
+      </div>
+
+      <div className="max-w-xl mx-auto mt-10">
+        <FaqInline
+          ids={["faq-payment-methods", "faq-cancel-refund", "faq-account-required", "faq-package-stack"]}
+          locale={locale}
+        />
       </div>
     </div>
   );

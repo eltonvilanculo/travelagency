@@ -188,72 +188,83 @@ export function Hero({ locale, copy }: HeroProps) {
             ))}
           </div>
 
-          {/* Search row */}
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-2 bg-white rounded-xl">
-            {tab !== "hotel" && (
-              <CitySelect
-                value={from}
-                onChange={setFrom}
-                placeholder={tab === "car" ? copy.fields.pickupCity : copy.fields.from}
-                className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white min-w-0 basis-full sm:basis-auto"
-              />
-            )}
-            <CitySelect
-              value={to}
-              onChange={setTo}
-              placeholder={tab === "car" ? copy.fields.dropOffCity : tab === "hotel" ? copy.fields.destination : copy.fields.to}
-              className="flex-1 border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white min-w-0 basis-full sm:basis-auto"
-            />
-            <div className="flex-1 min-w-[130px] border border-shadow rounded-lg px-3 py-1.5 focus-within:border-orange">
-              <label className="block text-[9px] uppercase tracking-wide text-darkgray leading-none pt-0.5">
-                {tab === "hotel" ? copy.fields.checkIn : tab === "car" ? copy.fields.pickupDate : copy.fields.departureDate}
-              </label>
-              <input
-                type="date"
-                min={todayStr()}
-                value={date}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="w-full text-parablack text-sm focus:outline-none -ml-px"
-              />
-            </div>
-            <div className="flex-1 min-w-[130px] border border-shadow rounded-lg px-3 py-1.5 focus-within:border-orange">
-              <label className="block text-[9px] uppercase tracking-wide text-darkgray leading-none pt-0.5">
-                {tab === "hotel" ? copy.fields.checkOut : tab === "car" ? copy.fields.dropOffDate : copy.fields.returnDateOptional}
-              </label>
-              <input
-                type="date"
-                min={date || todayStr()}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full text-parablack text-sm focus:outline-none -ml-px"
-              />
-            </div>
-            <select
-              value={tab === "hotel" ? rooms : tab === "car" ? carType : passengers}
-              onChange={(e) =>
-                tab === "hotel"
-                  ? setRooms(Number(e.target.value))
-                  : tab === "car"
-                    ? setCarType(e.target.value)
-                    : setPassengers(Number(e.target.value))
-              }
-              className="border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white shrink-0"
-            >
-              {tab === "hotel" ? (
-                <>{[1, 2, 3, 4].map((n) => <option key={n} value={n}>{countLabel(n, copy.rooms.singular, copy.rooms.plural)}</option>)}</>
-              ) : tab === "car" ? (
-                <>{copy.carTypes.map((type) => <option key={type} value={type}>{type}</option>)}</>
-              ) : (
-                <>{[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{countLabel(n, copy.passengers.singular, copy.passengers.plural)}</option>)}</>
+          {/* Search fields — a real grid instead of a wrapping flex row:
+              the flex-wrap version let the search button orphan onto its
+              own half-empty line at in-between widths (looked like a
+              layout bug, not a deliberate full-width CTA). Location/date
+              fields group into one balanced grid; the count select and
+              search button get their own row so the button always reads
+              as an intentional, full-width action. */}
+          <div className="flex flex-col gap-2 p-2 bg-white rounded-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {tab !== "hotel" && (
+                <CitySelect
+                  value={from}
+                  onChange={setFrom}
+                  placeholder={tab === "car" ? copy.fields.pickupCity : copy.fields.from}
+                  className="w-full border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white"
+                />
               )}
-            </select>
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="bg-orange hover:bg-orange/90 text-white rounded-lg px-8 py-3 text-sm font-bold uppercase transition-all duration-300 text-center shrink-0 whitespace-nowrap cursor-pointer"
-            >
-              {copy.search}
-            </button>
+              <CitySelect
+                value={to}
+                onChange={setTo}
+                placeholder={tab === "car" ? copy.fields.dropOffCity : tab === "hotel" ? copy.fields.destination : copy.fields.to}
+                className="w-full border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white"
+              />
+              <div className="border border-shadow rounded-lg px-3 py-1.5 focus-within:border-orange">
+                <label className="block text-[9px] uppercase tracking-wide text-darkgray leading-none pt-0.5">
+                  {tab === "hotel" ? copy.fields.checkIn : tab === "car" ? copy.fields.pickupDate : copy.fields.departureDate}
+                </label>
+                <input
+                  type="date"
+                  min={todayStr()}
+                  value={date}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="w-full text-parablack text-sm focus:outline-none -ml-px"
+                />
+              </div>
+              <div className="border border-shadow rounded-lg px-3 py-1.5 focus-within:border-orange">
+                <label className="block text-[9px] uppercase tracking-wide text-darkgray leading-none pt-0.5">
+                  {tab === "hotel" ? copy.fields.checkOut : tab === "car" ? copy.fields.dropOffDate : copy.fields.returnDateOptional}
+                </label>
+                <input
+                  type="date"
+                  min={date || todayStr()}
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full text-parablack text-sm focus:outline-none -ml-px"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+              <select
+                value={tab === "hotel" ? rooms : tab === "car" ? carType : passengers}
+                onChange={(e) =>
+                  tab === "hotel"
+                    ? setRooms(Number(e.target.value))
+                    : tab === "car"
+                      ? setCarType(e.target.value)
+                      : setPassengers(Number(e.target.value))
+                }
+                className="w-full border border-shadow rounded-lg px-4 py-3 text-parablack text-sm focus:outline-none focus:border-orange bg-white"
+              >
+                {tab === "hotel" ? (
+                  <>{[1, 2, 3, 4].map((n) => <option key={n} value={n}>{countLabel(n, copy.rooms.singular, copy.rooms.plural)}</option>)}</>
+                ) : tab === "car" ? (
+                  <>{copy.carTypes.map((type) => <option key={type} value={type}>{type}</option>)}</>
+                ) : (
+                  <>{[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{countLabel(n, copy.passengers.singular, copy.passengers.plural)}</option>)}</>
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="bg-orange hover:bg-orange/90 text-white rounded-lg px-10 py-3 text-sm font-bold uppercase transition-all duration-300 text-center whitespace-nowrap cursor-pointer"
+              >
+                {copy.search}
+              </button>
+            </div>
           </div>
           {error && <p className="text-orange text-xs px-2 pt-2">{error}</p>}
         </div>

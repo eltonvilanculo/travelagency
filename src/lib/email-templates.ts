@@ -1,4 +1,7 @@
+import { readFileSync } from "fs";
+import { join } from "path";
 import { escapeHtml } from "@/lib/email";
+import { formatMZN, formatUSDApprox, toMZN } from "@/lib/currency";
 import type { Currency } from "@/generated/prisma/client";
 import type { Locale } from "@/i18n/config";
 
@@ -12,6 +15,38 @@ type ReservationConfirmationInput = {
   total: number | null;
   currency: Currency | null;
 };
+
+// Embedded as a base64 data: URI rather than linked by URL — an <img
+// src="{siteUrl}/..."> pointed at a real site is the normal approach, but
+// this project isn't deployed yet, so siteUrl would resolve to localhost,
+// which Gmail's servers can never reach (hence the broken-image icon).
+// A data URI has no such requirement — it works identically before and
+// after deployment — and at ~30KB the logo is well within what email
+// clients render inline without complaint. Read once per process, not
+// per email.
+let logoDataUri: string | null = null;
+function getLogoDataUri(): string {
+  if (logoDataUri) return logoDataUri;
+  try {
+    const bytes = readFileSync(join(process.cwd(), "public/icons/logooficial.png"));
+    logoDataUri = `data:image/png;base64,${bytes.toString("base64")}`;
+  } catch {
+    logoDataUri = "";
+  }
+  return logoDataUri;
+}
+
+/** Header used by both templates — the logo art is white-on-transparent
+ * (see the quote page's print:invert comment for why), which is exactly
+ * right against this dark green banner. */
+function emailHeader(slogan: string): string {
+  const logo = getLogoDataUri();
+  return `
+      <div style="background: #16321f; padding: 24px; text-align: center;">
+        ${logo ? `<img src="${logo}" alt="ZambiTour" width="160" style="height: auto; display: block; margin: 0 auto;" />` : `<span style="color: #fff; font-size: 20px; font-weight: 600; letter-spacing: 0.02em;">ZambiTour</span>`}
+        <p style="color: #d97b29; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin: 10px 0 0; font-weight: 600;">${slogan}</p>
+      </div>`;
+}
 
 const COPY = {
   pt: {
@@ -78,7 +113,7 @@ export function tripConfirmationEmail(input: TripConfirmationInput): { subject: 
     .map((item) => {
       const formatted =
         item.total != null && item.currency != null
-          ? `${item.currency} ${item.total.toLocaleString(numberFmt)}`
+          ? `${formatMZN(item.total, item.currency, input.locale)} <span style="color: #a8a8a0; font-size: 11px;">(${formatUSDApprox(item.total, item.currency, input.locale)})</span>`
           : t.quotePending;
       return `
         <tr style="border-top: 1px solid #e7e1d5;">
@@ -88,15 +123,17 @@ export function tripConfirmationEmail(input: TripConfirmationInput): { subject: 
     })
     .join("");
 
-  const grandTotal = input.items.reduce((sum, item) => (item.total != null ? sum + item.total : sum), 0);
+  // toMZN converts the raw number directly — summing already-formatted
+  // display strings would break on pt-PT's "." thousands separator.
+  const grandTotalMzn = input.items.reduce(
+    (sum, item) => (item.total != null && item.currency != null ? sum + toMZN(item.total, item.currency) : sum),
+    0
+  );
   const hasAnyPrice = input.items.some((item) => item.total != null);
 
   const html = `
     <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #2b2b28;">
-      <div style="background: #16321f; padding: 24px; text-align: center;">
-        <span style="color: #fff; font-size: 20px; font-weight: 600; letter-spacing: 0.02em;">ZambiTour</span>
-        <p style="color: #d97b29; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin: 6px 0 0; font-weight: 600;">${t.slogan}</p>
-      </div>
+      ${emailHeader(t.slogan)}
       <div style="padding: 32px 24px; background: #ffffff;">
         <p style="font-size: 16px; margin: 0 0 16px;">${t.greeting(safeName)}</p>
         <p style="font-size: 14px; line-height: 1.6; margin: 0 0 24px;">${tt.body1}</p>
@@ -106,7 +143,7 @@ export function tripConfirmationEmail(input: TripConfirmationInput): { subject: 
             hasAnyPrice
               ? `<tr style="border-top: 2px solid #d97b29;">
                   <td style="padding: 10px 0; font-weight: 700; font-size: 13px;">${tt.total}</td>
-                  <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #d97b29; font-size: 15px;">${input.items[0].currency ?? ""} ${grandTotal.toLocaleString(numberFmt)}</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #d97b29; font-size: 15px;">MZN ${grandTotalMzn.toLocaleString(numberFmt)}</td>
                 </tr>`
               : ""
           }
@@ -129,15 +166,12 @@ export function reservationConfirmationEmail(input: ReservationConfirmationInput
   const safeItem = escapeHtml(input.itemName);
   const formattedTotal =
     input.total != null && input.currency != null
-      ? `${input.currency} ${input.total.toLocaleString(input.locale === "pt" ? "pt-PT" : "en-US")}`
+      ? `${formatMZN(input.total, input.currency, input.locale)} <span style="color: #a8a8a0; font-size: 11px; font-weight: 400;">(${formatUSDApprox(input.total, input.currency, input.locale)})</span>`
       : t.quotePending;
 
   const html = `
     <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #2b2b28;">
-      <div style="background: #16321f; padding: 24px; text-align: center;">
-        <span style="color: #fff; font-size: 20px; font-weight: 600; letter-spacing: 0.02em;">ZambiTour</span>
-        <p style="color: #d97b29; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin: 6px 0 0; font-weight: 600;">${t.slogan}</p>
-      </div>
+      ${emailHeader(t.slogan)}
       <div style="padding: 32px 24px; background: #ffffff;">
         <p style="font-size: 16px; margin: 0 0 16px;">${t.greeting(safeName)}</p>
         <p style="font-size: 14px; line-height: 1.6; margin: 0 0 24px;">${t.body1}</p>

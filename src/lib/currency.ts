@@ -9,7 +9,10 @@ const RATE_TO_MZN: Record<string, number> = {
   ZAR: 3.6,
 };
 
-function toMZN(amount: number, currency: string): number {
+/** Raw numeric conversion — exported for callers that need to sum several
+ * amounts (possibly in different catalog currencies) before formatting the
+ * total, rather than formatting each one and re-parsing the display string. */
+export function toMZN(amount: number, currency: string): number {
   return amount * (RATE_TO_MZN[currency] ?? 1);
 }
 

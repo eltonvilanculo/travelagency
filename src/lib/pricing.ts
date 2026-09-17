@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { toMZN } from "@/lib/currency";
 import type { Currency, ReservationServiceType } from "@/generated/prisma/client";
 
 // Single source of truth for "what does this reservation cost" — used by
@@ -120,17 +121,22 @@ export async function calculateQuote(input: QuoteInput): Promise<PriceQuote> {
   }
 
   const promo = await findActivePromo(input.serviceType, input.itemId);
+  const sourceCurrency = promo ? promo.currency : currency;
   const unitPrice = promo ? Number(promo.promoPrice) : basePrice;
   const subtotal = basePrice * quantity;
   const total = unitPrice * quantity;
 
+  // A quote is always in MZN, regardless of which currency the catalog
+  // item (or its promo) happens to be priced in — Payen's Mpesa/eMola
+  // gateway only accepts MZN, and a quote that silently stayed in USD/ZAR
+  // meant a hotel priced in USD could never actually be paid online.
   return {
-    unitPrice,
+    unitPrice: toMZN(unitPrice, sourceCurrency),
     quantity,
-    subtotal,
+    subtotal: toMZN(subtotal, sourceCurrency),
     promoApplied: promo !== null,
     promoId: promo?.id ?? null,
-    total,
-    currency: promo ? promo.currency : currency,
+    total: toMZN(total, sourceCurrency),
+    currency: "MZN",
   };
 }

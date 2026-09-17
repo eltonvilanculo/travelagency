@@ -91,3 +91,23 @@ export const quoteRateLimit = {
   maxRequests: 30,
   keyPrefix: "quote",
 };
+
+// The FAQ bot classifies in-process against a small local index (no
+// external API call, no real cost per message) — this is mainly a floor
+// against a scripted flood hammering the route, not a cost control the
+// way the payment/reservation limits are.
+export const chatRateLimit = {
+  windowMs: 60 * 1000,
+  maxRequests: 20,
+  keyPrefix: "chat",
+};
+
+// Customer-initiated payment (src/app/api/reservations/[id]/pay) — each
+// attempt calls the real Payen gateway, so this is tighter than the
+// quote/reservation limits: a genuine retry after a typo'd wallet number
+// is a handful of attempts, never dozens.
+export const paymentRateLimit = {
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 8,
+  keyPrefix: "customer-payment",
+};

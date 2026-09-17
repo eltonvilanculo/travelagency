@@ -120,8 +120,10 @@ export function Cars({ locale, copy, cars, bookingDates }: CarsProps) {
                 </div>
               </div>
 
-              {/* Price + CTA */}
-              <div className="flex items-center justify-between mt-auto">
+              {/* Price + CTA — stacked, not side-by-side: at narrower card
+                  widths a side-by-side row squeezed the pill button
+                  (2-line text) right on top of the price digits. */}
+              <div className="flex flex-col gap-3 mt-auto">
                 <div>
                   <p className="text-xs text-darkgray">{copy.from}</p>
                   <p className="text-orange font-bold text-xl">
@@ -132,7 +134,7 @@ export function Cars({ locale, copy, cars, bookingDates }: CarsProps) {
                 </div>
                 <Link
                   href={`${localizedPath(locale, "/book")}?type=car&id=${car.id}${dateQuery ? `&${dateQuery}` : ""}`}
-                  className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-4 py-2 text-xs font-semibold uppercase transition-all duration-300"
+                  className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-4 py-2.5 text-xs font-semibold uppercase text-center transition-all duration-300"
                 >
                   {copy.reserveCar}
                 </Link>
