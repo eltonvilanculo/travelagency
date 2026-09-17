@@ -63,4 +63,10 @@ Thumbs.db
 /test-results
 /.playwright-mcp
 
+# ad-hoc debug screenshots dropped at repo root during manual/agent testing
+# (real image assets live under /public, never here)
+/*.png
+/*.jpg
+/*.jpeg
+
 /src/generated/prisma
