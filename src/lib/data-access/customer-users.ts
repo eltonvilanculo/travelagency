@@ -13,6 +13,13 @@ export class CustomerUserService {
       image: u.image,
       createdAt: u.createdAt,
       reservationCount: u._count.reservations,
+      // A customer can in principle have both linked (signed in with
+      // Google once, Facebook another time — see customer-auth.ts's
+      // upsert-by-email) — surfaced as a list so the admin screen can
+      // show both badges rather than picking one arbitrarily.
+      providers: [u.googleId ? "google" : null, u.facebookId ? "facebook" : null].filter(
+        (p): p is "google" | "facebook" => p !== null
+      ),
     }));
   }
 }

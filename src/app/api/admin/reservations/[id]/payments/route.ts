@@ -16,16 +16,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { method, walletNumber } = initiatePaymentSchema.parse(body);
+    const parsed = initiatePaymentSchema.parse(body);
 
     const result = await PaymentService.initiateForReservation(
-      { reservationId: id, method, walletNumber },
+      {
+        reservationId: id,
+        method: parsed.method,
+        walletNumber: parsed.method === "TRANSFER" ? undefined : parsed.walletNumber,
+      },
       session.user.id
     );
 
     if (!result.ok) {
       if (result.reason === "not_found") {
         return NextResponse.json({ error: "Reserva não encontrada" }, { status: 404 });
+      }
+      if (result.reason === "gateway_error") {
+        return NextResponse.json({ error: result.error }, { status: 502 });
       }
       return NextResponse.json({ error: "Reserva ainda não tem uma cotação para cobrar" }, { status: 409 });
     }

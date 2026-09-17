@@ -89,7 +89,7 @@ function loginAttemptGate(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/api/auth/callback/credentials") {
+  if (pathname === "/api/admin-auth/callback/credentials") {
     const rateLimited = loginAttemptGate(request);
     if (rateLimited.status === 429) return rateLimited;
   }

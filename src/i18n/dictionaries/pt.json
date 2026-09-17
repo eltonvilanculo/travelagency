@@ -313,10 +313,12 @@
       },
       "vehicleTypes": ["Sedan Económico", "SUV", "4x4 Safari", "Minibus"],
       "submit": "Enviar Pedido de Reserva",
+      "packageCta": "Adicionar à Minha Viagem e Continuar",
       "addToTrip": "Adicionar à Minha Viagem",
       "addedToTrip": "Adicionado à sua viagem",
       "addToTripHint": "Só isto, ou quer juntar mais serviços ao mesmo pedido?",
       "viewTrip": "Ver a minha viagem ({count} itens)",
+      "viewTripOne": "Ver a minha viagem (1 item)",
       "note": "Fazemos a sua cotação e tratamos o pagamento diretamente consigo.",
       "price": {
         "estimate": "Valor estimado",
@@ -326,16 +328,22 @@
         "perPerson": "/pessoa",
         "perUnit": "/unidade",
         "quoteOnRequest": "Cotação feita por um dos nossos agentes",
-        "unavailable": "Não foi possível calcular o preço para esta seleção"
+        "unavailable": "Não foi possível calcular o preço para esta seleção",
+        "packageStackHint": "Preço por pessoa. Para mais pessoas, feche a janela da viagem e adicione este pacote outra vez."
       },
       "status": {
         "submitting": "A enviar o seu pedido...",
         "successTitle": "Pedido recebido",
         "successBody": "Vai receber um email de confirmação e um dos nossos agentes entrará em contacto em breve.",
         "reference": "Referência",
+        "transferHint": "Guarde esta referência — também pode pagar por transferência bancária no nosso escritório, apresentando este código.",
+        "reloadNotice": "Esta página vai recarregar automaticamente em breve.",
         "newRequest": "Fazer outro pedido",
         "errorTitle": "Algo correu mal",
-        "tryAgain": "Tentar novamente"
+        "tryAgain": "Tentar novamente",
+        "signInGoogle": "Continuar com Google",
+        "signInFacebook": "Continuar com Facebook",
+        "accountRequired": "É necessário iniciar sessão (Google ou Facebook) para enviar o pedido — os seus dados não se perdem."
       }
     },
     "payment": {

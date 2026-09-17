@@ -7,15 +7,24 @@ const SAFE_ADMIN_SELECT = { id: true, name: true, email: true, role: true } as c
 export type InitiateReservationPaymentInput = {
   reservationId: string;
   method: PaymentMethod;
-  walletNumber: string;
+  /** Not required for TRANSFER — settled in person, no wallet involved. */
+  walletNumber?: string;
 };
 
 export class PaymentService {
   /** Agent-triggered: reservation has a quote, customer is ready to pay.
-   * Creates the Payment row, calls the (currently stubbed) gateway
-   * adapter, and moves the reservation into the payment part of RF-026's
-   * flow. The full wallet number lives only in this function's stack —
-   * it's masked before anything touches the database. */
+   * Creates (or reuses) the Payment row, calls the Payen gateway adapter,
+   * and moves the reservation into the payment part of RF-026's flow. The
+   * full wallet number lives only in this function's stack — it's masked
+   * before anything touches the database.
+   *
+   * Idempotency: the Payment row's own id is created *before* the gateway
+   * is ever called, and is reused as Payen's externalRequestId AND
+   * X-Idempotency-Key. A retry of the same intended transaction (double
+   * click, a timed-out first attempt) reuses whatever non-terminal Payment
+   * row already exists for this reservation instead of creating a new
+   * one — Payen itself also treats a repeated idempotency key as "return
+   * the existing result", so this is defense in depth, not the only guard. */
   static async initiateForReservation(input: InitiateReservationPaymentInput, actorId: string) {
     const reservation = await prisma.reservation.findUnique({ where: { id: input.reservationId } });
     if (!reservation) return { ok: false as const, reason: "not_found" as const };
@@ -23,44 +32,80 @@ export class PaymentService {
       return { ok: false as const, reason: "not_quoted" as const };
     }
 
+    const existingPending = await prisma.payment.findFirst({
+      where: { reservationId: reservation.id, status: { in: ["PENDING", "AUTHORIZED", "RECEIVED"] } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const walletMasked = input.walletNumber ? maskWallet(input.walletNumber) : null;
+
+    const payment =
+      existingPending ??
+      (await prisma.payment.create({
+        data: {
+          reservationId: reservation.id,
+          method: input.method,
+          status: "PENDING",
+          walletMasked,
+          amount: reservation.quotedPrice,
+          currency: reservation.quotedCurrency,
+        },
+      }));
+
     const gatewayResult = await initiatePayment({
       method: input.method,
       amount: Number(reservation.quotedPrice),
       currency: reservation.quotedCurrency,
       walletNumber: input.walletNumber,
-      reference: reservation.reference,
+      description: `Zambi Tour ${reservation.reference}`,
+      externalRequestId: payment.id,
     });
 
-    const payment = await prisma.payment.create({
-      data: {
-        reservationId: reservation.id,
-        method: input.method,
-        status: gatewayResult.status,
-        providerIntentId: gatewayResult.providerIntentId,
-        walletMasked: maskWallet(input.walletNumber),
-        amount: reservation.quotedPrice,
-        currency: reservation.quotedCurrency,
-        rawResponse: gatewayResult.rawResponse as Prisma.InputJsonValue,
-        respondedAt: new Date(),
-      },
+    // method/walletMasked are re-synced here even when reusing an existing
+    // pending row — an agent can correct their choice (e.g. picked M-Pesa,
+    // meant Transferência) on a retry, and the stored row must reflect the
+    // most recent attempt, not the first one.
+    const updated = await prisma.payment.update({
+      where: { id: payment.id },
+      data: gatewayResult.ok
+        ? {
+            method: input.method,
+            walletMasked,
+            status: gatewayResult.status,
+            providerIntentId: gatewayResult.providerIntentId,
+            providerReference: gatewayResult.providerReference,
+            rawResponse: gatewayResult.rawResponse as Prisma.InputJsonValue,
+            respondedAt: new Date(),
+          }
+        : {
+            method: input.method,
+            walletMasked,
+            status: "FAILED",
+            rawResponse: { error: gatewayResult.error, ...(gatewayResult.rawResponse ?? {}) } as Prisma.InputJsonValue,
+            respondedAt: new Date(),
+          },
     });
+
+    const { logAudit } = await import("@/lib/audit");
+    await logAudit({
+      actorId,
+      action: existingPending ? "payment.retry" : "payment.initiate",
+      entityType: "Payment",
+      entityId: updated.id,
+      before: existingPending ?? undefined,
+      after: updated,
+    });
+
+    if (!gatewayResult.ok) {
+      return { ok: false as const, reason: "gateway_error" as const, error: gatewayResult.error };
+    }
 
     await prisma.reservation.update({
       where: { id: reservation.id },
       data: { status: "AWAITING_PAYMENT", agentId: actorId },
     });
 
-    const { logAudit } = await import("@/lib/audit");
-    await logAudit({
-      actorId,
-      action: "payment.initiate",
-      entityType: "Payment",
-      entityId: payment.id,
-      before: undefined,
-      after: payment,
-    });
-
-    return { ok: true as const, payment };
+    return { ok: true as const, payment: updated };
   }
 
   static async findAll(options: { status?: PaymentStatus; method?: PaymentMethod } = {}) {
@@ -84,12 +129,15 @@ export class PaymentService {
     });
   }
 
-  /** Manual status override — used while Payen isn't wired (an agent
-   * confirming a payment they verified by phone/bank statement), and
-   * afterwards for handling any state a webhook doesn't cleanly cover. */
-  static async updateStatus(id: string, status: PaymentStatus, actorId: string) {
+  /** Manual status override (admin) or webhook-driven status update — both
+   * paths funnel through here so the CONFIRMED cascade only ever happens
+   * once. A payment already CONFIRMED is a no-op: repeated webhook
+   * deliveries for the same success must not re-run side effects, reset
+   * confirmedAt, or write a second audit entry. */
+  static async updateStatus(id: string, status: PaymentStatus, actorId: string | null) {
     const before = await prisma.payment.findUnique({ where: { id } });
     if (!before) return null;
+    if (before.status === "CONFIRMED") return before;
 
     const after = await prisma.payment.update({
       where: { id },

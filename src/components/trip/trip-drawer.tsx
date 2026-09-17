@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession, signIn } from "next-auth/react";
 import { useTrip } from "@/lib/trip-context";
+import { GoogleLogo, FacebookLogo } from "@/components/ui/social-logos";
 import { analyzeTripWarnings, type TripWarning } from "@/lib/trip-warnings";
 import { formatMZN, formatUSDApprox } from "@/lib/currency";
 import type { Locale } from "@/i18n/config";
@@ -23,13 +24,17 @@ const COPY = {
     remarksLabel: "Observações (opcional)",
     submit: "Enviar Pedido de Viagem",
     submitting: "A enviar...",
+    signInGoogle: "Iniciar Sessão com Google para Reservar",
+    signInFacebook: "Iniciar Sessão com Facebook para Reservar",
     successTitle: "Pedido enviado!",
     successBody: "Vai receber um email de confirmação. Pode também ver e descarregar a cotação já.",
+    transferHint: "Guarde a referência acima — também pode pagar por transferência bancária no nosso escritório, apresentando este código.",
+    reloadNotice: "Esta página vai recarregar automaticamente em breve.",
     downloadQuote: "Ver / Descarregar Cotação",
     newTrip: "Começar nova viagem",
     errorGeneric: "Algo correu mal, tente novamente.",
     signedInAs: "Sessão iniciada como",
-    signInPrompt: "Iniciar sessão com Google para guardar esta viagem à sua conta",
+    accountRequired: "É necessário iniciar sessão (Google ou Facebook) para enviar o pedido — os seus dados não se perdem.",
     close: "Fechar",
     dismiss: "Ignorar",
     warningDuplicate: (name: string) => `Já tem "${name}" na sua viagem.`,
@@ -52,13 +57,17 @@ const COPY = {
     remarksLabel: "Notes (optional)",
     submit: "Send Trip Request",
     submitting: "Sending...",
+    signInGoogle: "Sign in with Google to Book",
+    signInFacebook: "Sign in with Facebook to Book",
     successTitle: "Request sent!",
     successBody: "You'll receive a confirmation email. You can also view and download the quote now.",
+    transferHint: "Keep the reference above — you can also pay by bank transfer at our office by presenting this code.",
+    reloadNotice: "This page will reload automatically shortly.",
     downloadQuote: "View / Download Quote",
     newTrip: "Start a new trip",
     errorGeneric: "Something went wrong, please try again.",
     signedInAs: "Signed in as",
-    signInPrompt: "Sign in with Google to save this trip to your account",
+    accountRequired: "You need to sign in (Google or Facebook) to send the request — your details won't be lost.",
     close: "Close",
     dismiss: "Dismiss",
     warningDuplicate: (name: string) => `You already have "${name}" in your trip.`,
@@ -83,15 +92,51 @@ type SubmitState =
 
 export function TripDrawer({ locale }: { locale: Locale }) {
   const t = COPY[locale];
-  const { items, removeItem, clear, isOpen, open, close } = useTrip();
-  const { data: session } = useSession();
+  const { items, removeItem, clear, isOpen, open, close, contact, setContact } = useTrip();
+  const { data: session, status: sessionStatus } = useSession();
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [remarks, setRemarks] = useState("");
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
+
+  // Slide-in/out instead of a hard cut — keep the panel mounted for the
+  // close transition's duration, and drive the transform/opacity off a
+  // separate `visible` flag so the "just mounted" frame renders off-screen
+  // before transitioning to its resting position on the next frame.
+  const [shouldRender, setShouldRender] = useState(false);
+  const [visible, setVisible] = useState(false);
+  // Split into two effects so the "mount off-screen, THEN transition to
+  // visible" sequencing is guaranteed: the second effect only runs once
+  // shouldRender has actually committed a render with visible still
+  // false, which is what makes the CSS transition animate instead of
+  // jumping straight to its end state. Every setState call is deferred
+  // (setTimeout/rAF callback), never synchronous in the effect body
+  // itself, per react-hooks/set-state-in-effect.
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => setShouldRender(true), 0);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => setShouldRender(false), 300);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (shouldRender && isOpen) {
+      const raf = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    const timer = setTimeout(() => setVisible(false), 0);
+    return () => clearTimeout(timer);
+  }, [shouldRender, isOpen]);
+
+  // Auto-reload after a successful submission — long enough to read/copy
+  // the reference and click the quote link (opens in a new tab, so the
+  // reload here doesn't interrupt it), then resets to a clean form.
+  useEffect(() => {
+    if (submit.status !== "success") return;
+    const timer = setTimeout(() => window.location.reload(), 8000);
+    return () => clearTimeout(timer);
+  }, [submit.status]);
 
   const warningKey = (w: TripWarning) => `${w.type}-${w.localId}`;
   const warnings = useMemo(() => analyzeTripWarnings(items), [items]);
@@ -119,6 +164,19 @@ export function TripDrawer({ locale }: { locale: Locale }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submit.status === "loading") return;
+
+    // Account creation is mandatory to submit — but the fields above are
+    // already saved to localStorage via TripProvider's contact state, so
+    // the OAuth round-trip doesn't lose anything typed so far. This is a
+    // fallback only (e.g. Enter key in a text field) — the normal path is
+    // one of the two provider-specific buttons below, which call signIn
+    // directly and never reach here. No provider specified here on
+    // purpose: NextAuth's own sign-in page lists both.
+    if (!session?.user) {
+      signIn();
+      return;
+    }
+
     setSubmit({ status: "loading" });
 
     try {
@@ -127,8 +185,8 @@ export function TripDrawer({ locale }: { locale: Locale }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locale,
-          customerRemarks: remarks || undefined,
-          customer: { fullName, phone, email: email || undefined },
+          customerRemarks: contact.remarks || undefined,
+          customer: { fullName: contact.fullName, phone: contact.phone, email: contact.email || undefined },
           items: items.map((i) => ({
             serviceType: i.serviceType,
             itemId: i.itemId,
@@ -162,7 +220,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
         <button
           type="button"
           onClick={open}
-          className="fixed bottom-6 right-6 z-40 bg-leafy text-white rounded-full pl-4 pr-5 py-3 flex items-center gap-2 shadow-xl hover:bg-leafy/90 transition-all duration-300 cursor-pointer"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 bg-leafy text-white rounded-full pl-3 pr-4 py-2.5 sm:pl-4 sm:pr-5 sm:py-3 flex items-center gap-2 shadow-xl hover:bg-leafy/90 transition-all duration-300 cursor-pointer"
         >
           <TripIcon />
           <span className="text-sm font-semibold">{t.trigger}</span>
@@ -172,10 +230,17 @@ export function TripDrawer({ locale }: { locale: Locale }) {
         </button>
       )}
 
-      {isOpen && (
+      {shouldRender && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={close} />
-          <div className="relative w-full max-w-sm bg-white h-full overflow-y-auto flex flex-col">
+          <div
+            className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+            onClick={close}
+          />
+          <div
+            className={`relative w-full max-w-sm bg-white h-full overflow-y-auto flex flex-col transition-transform duration-300 ease-out ${
+              visible ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
             <div className="bg-leafy px-6 py-5 flex items-center justify-between shrink-0">
               <h2 className="text-white text-lg">{t.title}</h2>
               <button type="button" onClick={close} aria-label={t.close} className="text-white/70 hover:text-white cursor-pointer">
@@ -194,6 +259,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                 </div>
                 <h3 className="text-textdark text-xl">{t.successTitle}</h3>
                 <p className="text-parablack text-sm">{t.successBody}</p>
+                <p className="text-darkgray text-xs leading-relaxed max-w-[260px]">{t.transferHint}</p>
                 <Link
                   href={submit.quoteUrl}
                   target="_blank"
@@ -208,6 +274,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                 >
                   {t.newTrip}
                 </button>
+                <p className="text-darkgray/60 text-[11px]">{t.reloadNotice}</p>
               </div>
             ) : (
               <>
@@ -243,7 +310,7 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                   ))}
 
                   {visibleWarnings.map((w) => (
-                    <div key={warningKey(w)} className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-2">
+                    <div key={warningKey(w)} className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-2 animate-drop-in">
                       <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-amber-500 shrink-0 mt-0.5">
                         <path d="M12 2L1 21h22L12 2zm0 5.5L18.8 19H5.2L12 7.5zM11 10v4h2v-4h-2zm0 5v2h2v-2h-2z" />
                       </svg>
@@ -273,28 +340,53 @@ export function TripDrawer({ locale }: { locale: Locale }) {
                       </div>
                     )}
 
-                    <input required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t.fullName} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
-                    <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phone} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.email} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
-                    <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder={t.remarksLabel} rows={2} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
+                    <input required value={contact.fullName} onChange={(e) => setContact({ fullName: e.target.value })} placeholder={t.fullName} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
+                    <input required type="tel" value={contact.phone} onChange={(e) => setContact({ phone: e.target.value })} placeholder={t.phone} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
+                    <input type="email" value={contact.email} onChange={(e) => setContact({ email: e.target.value })} placeholder={t.email} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
+                    <textarea value={contact.remarks} onChange={(e) => setContact({ remarks: e.target.value })} placeholder={t.remarksLabel} rows={2} className="border border-shadow rounded-lg px-3 py-2 text-sm" />
 
                     {submit.status === "error" && <p className="text-red-500 text-xs">{submit.message}</p>}
 
-                    <button
-                      type="submit"
-                      disabled={submit.status === "loading"}
-                      className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-6 py-3 text-sm font-semibold uppercase transition-all duration-300 cursor-pointer disabled:opacity-60"
-                    >
-                      {submit.status === "loading" ? t.submitting : t.submit}
-                    </button>
+                    {session?.user ? (
+                      <button
+                        type="submit"
+                        disabled={submit.status === "loading"}
+                        className="bg-orange hover:bg-orange/90 text-white rounded-3xl px-6 py-3 text-sm font-semibold uppercase transition-all duration-300 cursor-pointer disabled:opacity-60"
+                      >
+                        {submit.status === "loading" ? t.submitting : t.submit}
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => signIn("google")}
+                          disabled={sessionStatus === "loading"}
+                          className="bg-leafy hover:bg-leafy/90 text-white rounded-3xl px-6 py-2 text-sm font-semibold uppercase transition-all duration-300 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-3"
+                        >
+                          <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0">
+                            <GoogleLogo className="w-3.5 h-3.5" />
+                          </span>
+                          {t.signInGoogle}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => signIn("facebook")}
+                          disabled={sessionStatus === "loading"}
+                          className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white rounded-3xl px-6 py-2 text-sm font-semibold uppercase transition-all duration-300 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-3"
+                        >
+                          <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0">
+                            <FacebookLogo className="w-3.5 h-3.5" />
+                          </span>
+                          {t.signInFacebook}
+                        </button>
+                      </div>
+                    )}
 
                     <p className="text-center text-xs text-darkgray">
                       {session?.user?.email ? (
                         <>{t.signedInAs} {session.user.name || session.user.email}</>
                       ) : (
-                        <button type="button" onClick={() => signIn("google")} className="underline cursor-pointer">
-                          {t.signInPrompt}
-                        </button>
+                        t.accountRequired
                       )}
                     </p>
                   </form>

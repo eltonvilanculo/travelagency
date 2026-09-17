@@ -89,6 +89,12 @@ enum ReservationServiceType {
 enum PaymentMethod {
   MPESA
   EMOLA
+  /// Bank transfer, settled in person at the office — no Payen call, no
+  /// wallet number. The reservation reference is what the customer brings
+  /// in and the agent matches against, so this stays a payment *method*
+  /// (goes through the same Payment row/status flow) rather than a
+  /// separate reservation status.
+  TRANSFER
 }
 
 /// RF-046 + §10.3 exception table.
@@ -477,13 +483,14 @@ model Reservation {
 /// Account/Session tables are needed — this is the one row per person we
 /// do want to persist.
 model CustomerUser {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  image     String?
-  googleId  String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  image      String?
+  googleId   String?  @unique
+  facebookId String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   reservations Reservation[]
 

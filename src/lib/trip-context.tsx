@@ -34,6 +34,20 @@ export type TripItem = {
 };
 
 const STORAGE_KEY = "zt_trip_v1";
+const CONTACT_STORAGE_KEY = "zt_trip_contact_v1";
+
+/** The four contact fields, shared between the main booking form and the
+ * "Minha Viagem" drawer so filling them in once carries over — and so
+ * they survive the full-page redirect a mandatory Google sign-in causes
+ * (localStorage persists across that; component state does not). */
+export type TripContact = {
+  fullName: string;
+  phone: string;
+  email: string;
+  remarks: string;
+};
+
+const EMPTY_CONTACT: TripContact = { fullName: "", phone: "", email: "", remarks: "" };
 
 type TripContextValue = {
   items: TripItem[];
@@ -43,12 +57,15 @@ type TripContextValue = {
   isOpen: boolean;
   open: () => void;
   close: () => void;
+  contact: TripContact;
+  setContact: (patch: Partial<TripContact>) => void;
 };
 
 const TripContext = createContext<TripContextValue | null>(null);
 
 export function TripProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<TripItem[]>([]);
+  const [contact, setContactState] = useState<TripContact>(EMPTY_CONTACT);
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -64,6 +81,12 @@ export function TripProvider({ children }: { children: ReactNode }) {
       } catch {
         // Corrupt or inaccessible storage — start empty rather than crash.
       }
+      try {
+        const raw = window.localStorage.getItem(CONTACT_STORAGE_KEY);
+        if (raw) setContactState((prev) => ({ ...prev, ...JSON.parse(raw) }));
+      } catch {
+        // Same — start blank rather than crash.
+      }
       setHydrated(true);
     }, 0);
     return () => clearTimeout(timer);
@@ -78,6 +101,15 @@ export function TripProvider({ children }: { children: ReactNode }) {
     }
   }, [items, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify(contact));
+    } catch {
+      // Storage full/blocked — contact fields still work for this page view.
+    }
+  }, [contact, hydrated]);
+
   const addItem = useCallback((item: Omit<TripItem, "localId">) => {
     setItems((prev) => [...prev, { ...item, localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }]);
     setIsOpen(true);
@@ -90,10 +122,13 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setItems([]), []);
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
+  const setContact = useCallback((patch: Partial<TripContact>) => {
+    setContactState((prev) => ({ ...prev, ...patch }));
+  }, []);
 
   const value = useMemo(
-    () => ({ items, addItem, removeItem, clear, isOpen, open, close }),
-    [items, addItem, removeItem, clear, isOpen, open, close]
+    () => ({ items, addItem, removeItem, clear, isOpen, open, close, contact, setContact }),
+    [items, addItem, removeItem, clear, isOpen, open, close, contact, setContact]
   );
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;

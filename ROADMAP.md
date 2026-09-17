@@ -242,34 +242,62 @@ you keep driving colour/visual direction on top of them.
   engine) is BRD decision D-06 — open.
 
 ### Phase 6 — Payments: Payen / M-Pesa / e-Mola (§10, RF-040–047)
-Originally sequenced last since it's blocked on an external party (Payen
-sandbox access) — as of 2026-09-07, everything *except the actual Payen
-API call* is built and verified, specifically so that access landing is
-the very last step, not a redesign:
-- **Done:** `PaymentService` (`src/lib/data-access/payments.ts`) — an
-  agent starts payment collection from a quoted reservation (masked
-  wallet number, RF-026 -> `AWAITING_PAYMENT`), the admin payments
-  dashboard (`/admin/pagamentos`) with status/method filters and summary
-  tiles, manual status override (used until Payen is wired, and afterwards
-  for anything a webhook doesn't cleanly cover), and confirming a payment
-  correctly cascades the reservation to `CONFIRMED`. All verified live
-  against the real database, including the "not quoted yet" error path.
-- **Done, deliberately a stub:** `src/lib/payments/payen-adapter.ts` is
-  the *only* piece of this phase that isn't real — one function,
-  clearly marked, that creates a `PENDING` intent locally instead of
-  calling Payen. Everything upstream (Payment model, dashboard, the
-  reservation-to-payment flow) is built against its real return shape, so
-  wiring the actual API call later doesn't touch any caller.
-- **Still blocked on Payen access:** the real `initiatePayment` call, the
-  webhook receiver (idempotency ledger `WebhookEvent`/RF-044/T-08 already
-  modelled, not yet built), and the §10.3 exception handling that only
-  makes sense against a real gateway (timeout, duplicate, divergent
-  amount, wallet failure). **Also blocked on BRD decisions D-01, D-02,
-  D-03** (currency/conversion rule, Payen sandbox credentials, what
-  "confirmed" means) — business/finance calls, not engineering ones.
+**Done (2026-09-15):** Payen access landed and the real integration is
+wired, using one Zambi Tour application/API key (never a key per tour) —
+see the reference guide in that day's session for the Xclusivo research
+this was built on:
+- `src/lib/payments/payen-config.ts` / `payen-client.ts` — the gateway
+  HTTP client (`X-Api-Key`, `initiate`, `fetchPayment`/`GET
+  /payments/{id}`, `health`), isolated from business logic.
+- `src/lib/payments/payen-adapter.ts` — the seam `PaymentService` calls;
+  validates phone prefix/e-Mola minimum/MZN-only before ever calling
+  Payen, maps Payen's response into the existing `Payment` model's shape.
+- `src/lib/data-access/payments.ts` — `initiateForReservation` now
+  creates the `Payment` row *before* calling Payen and reuses its own id
+  as both `externalRequestId` and `X-Idempotency-Key`; a retry (double
+  click, timed-out first attempt) reuses whatever non-terminal `Payment`
+  row already exists for that reservation instead of creating a new one.
+  `updateStatus` is now idempotent — a payment already `CONFIRMED` is a
+  no-op, so a repeated webhook delivery can't double-cascade the
+  reservation or re-fire side effects.
+- `src/app/api/webhooks/payen/mpesa/route.ts` and `.../emola/route.ts`
+  (new) — receive Payen's webhook, record it in the `WebhookEvent`
+  idempotency ledger first (a DB unique-constraint hit means "already
+  processed", short-circuit), then **always re-verify the real status via
+  `GET /payments/{id}`** rather than trusting the webhook body (it carries
+  no signature), then update `Payment` and cascade `Reservation`.
+- Manual status override in `/admin/pagamentos` stays as the fallback for
+  anything a webhook doesn't cleanly cover.
 - Reconciliation screen for Finance (expected vs. received, divergence
-  queue, export, RF-047) is the one piece not started at all — needs a
-  real webhook flow to reconcile against first.
+  queue, export, RF-047) is still not started — the one piece that
+  genuinely needs a live webhook history to build and test against.
+- Verified: `tsc`/`eslint`/`next build` clean; the double-click/retry
+  reuse path, the MZN-only guard, the M-Pesa/e-Mola phone-prefix guard,
+  the e-Mola minimum-amount guard, and the webhook idempotency ledger
+  (missing identifier / unknown payment / duplicate delivery) were all
+  exercised live against the real database.
+- **Verified live against the real Payen gateway (2026-09-15):** auth
+  (`X-Api-Key`), M-Pesa initiate (real provider call, real timeout on an
+  unregistered test number — confirmed this environment forwards to the
+  real M-Pesa/e-Mola provider, it is not a mock), e-Mola initiate,
+  `X-Idempotency-Key` dedup ("Existing idempotent payment request
+  returned" on retry), `GET /payments/{id}`, and — the most important
+  one — sending our own webhook route a **fabricated** `status: "FAILED"`
+  body for a real, still-PENDING payment: it was correctly ignored, the
+  system re-verified against Payen directly, and left the payment
+  untouched. One environment gotcha found: an API key is scoped to
+  whichever host it was created against — this key only authenticates on
+  `dev.payen.gestaosistema.com`, not the production host from the
+  written docs (`PAYEN_BASE_URL` in `.env` updated accordingly, with a
+  note left in `.env.example`). `GET /payments/me/summary` and
+  `/payments/me/history` both 404 on this deployment — not used by this
+  integration, but noted for whenever the Reconciliation screen above
+  gets built.
+- **Remaining risk:** a real success (`CONFIRMED`) path — an actual
+  payer completing an M-Pesa/e-Mola prompt — was deliberately not
+  triggered (that needs a real phone and the account holder's consent),
+  so the CONFIRMED-cascade branch of the webhook handler is verified by
+  code review and the local-only test suite, not a live gateway event.
 
 ### Phase 7 — Hardening & launch
 - Testing against the BRD's own scenario list (§17.1, T-01…T-12).

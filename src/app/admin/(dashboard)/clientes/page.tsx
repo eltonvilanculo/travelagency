@@ -8,7 +8,7 @@ export default async function ClientesPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-slate-900 mb-1">Clientes</h1>
-      <p className="text-slate-500 text-sm mb-6">Contas de cliente criadas via sessão Google — separado dos contactos de reserva como convidado.</p>
+      <p className="text-slate-500 text-sm mb-6">Contas de cliente criadas via sessão Google ou Facebook — separado dos contactos de reserva como convidado.</p>
       <ClientesClient />
     </div>
   );

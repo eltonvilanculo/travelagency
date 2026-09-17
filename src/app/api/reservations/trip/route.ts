@@ -9,15 +9,25 @@ import { tripConfirmationEmail } from "@/lib/email-templates";
 import { getCurrentCustomerUser } from "@/lib/customer-auth";
 import { localizedPath } from "@/i18n/config";
 
-// Public, unauthenticated (signing in is optional everywhere) — submits
-// the whole "Minha Viagem" stack as one request. Same rate limits as a
-// single reservation; a trip group is still one person's submission, not
-// a bulk-import path (also capped at 10 items by createTripSchema itself).
+// Submits the whole "Minha Viagem" stack as one request. A signed-in
+// customer is now required (2026-09-16 decision — replaces the earlier
+// guest-checkout design) — enforced here, not just in the drawer's UI.
+// Same rate limits as a single reservation; a trip group is still one
+// person's submission, not a bulk-import path (also capped at 10 items by
+// createTripSchema itself).
 export async function POST(request: NextRequest) {
   if (!isAllowed(request, reservationRateLimit)) {
     return NextResponse.json(
       { error: "Demasiados pedidos deste endereço, tente novamente mais tarde" },
       { status: 429 }
+    );
+  }
+
+  const customerUser = await getCurrentCustomerUser().catch(() => null);
+  if (!customerUser) {
+    return NextResponse.json(
+      { error: "É necessário iniciar sessão com Google para enviar um pedido de viagem" },
+      { status: 401 }
     );
   }
 
@@ -41,8 +51,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const customerUser = await getCurrentCustomerUser().catch(() => null);
-    const { tripGroupId, items } = await ReservationService.createTripGroup(input, customerUser?.id);
+    const { tripGroupId, items } = await ReservationService.createTripGroup(input, customerUser.id);
 
     const itemSummaries = await Promise.all(
       items.map(async ({ reservation, quote }, index) => {

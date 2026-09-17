@@ -313,10 +313,12 @@
       },
       "vehicleTypes": ["Economy Sedan", "SUV", "4x4 Safari", "Minibus"],
       "submit": "Send Booking Request",
+      "packageCta": "Add to My Trip and Continue",
       "addToTrip": "Add to My Trip",
       "addedToTrip": "Added to your trip",
       "addToTripHint": "Just this, or add more services to the same request?",
       "viewTrip": "View my trip ({count} items)",
+      "viewTripOne": "View my trip (1 item)",
       "note": "We prepare your quote and handle payment directly with you.",
       "price": {
         "estimate": "Estimated total",
@@ -326,13 +328,19 @@
         "perDay": "/day",
         "perPerson": "/person",
         "quoteOnRequest": "Priced by one of our agents",
-        "unavailable": "Could not calculate a price for this selection"
+        "unavailable": "Could not calculate a price for this selection",
+        "packageStackHint": "Price per person. For more people, close the trip window and add this package again."
       },
       "status": {
         "submitting": "Sending your request...",
         "successTitle": "Request received",
         "successBody": "You'll receive a confirmation email and one of our agents will be in touch shortly.",
         "reference": "Reference",
+        "transferHint": "Keep this reference — you can also pay by bank transfer at our office by presenting this code.",
+        "reloadNotice": "This page will reload automatically shortly.",
+        "signInGoogle": "Continue with Google",
+        "signInFacebook": "Continue with Facebook",
+        "accountRequired": "You need to sign in (Google or Facebook) to send the request — your details won't be lost.",
         "newRequest": "Make another request",
         "errorTitle": "Something went wrong",
         "tryAgain": "Try again"

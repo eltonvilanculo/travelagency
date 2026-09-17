@@ -6,16 +6,27 @@ import { PricingError } from "@/lib/pricing";
 import { isAllowed, isAllowedForKey, reservationRateLimit, reservationPhoneRateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email";
 import { reservationConfirmationEmail } from "@/lib/email-templates";
+import { getCurrentCustomerUser } from "@/lib/customer-auth";
 
-// Public, unauthenticated — this is what the booking form on the public
-// site submits to. Rate-limited against scripted floods; every other
-// failure mode (bad input, item unavailable, pricing error) returns a
-// clean 4xx with a message the form can show directly, never a raw 500.
+// This is what the booking form on the public site submits to. A signed-in
+// customer is now required (2026-09-16 decision — replaces the earlier
+// guest-checkout design) — enforced here, not just in the form UI, since a
+// UI-only gate is not a real gate. Rate-limited against scripted floods on
+// top of that; every other failure mode (bad input, item unavailable,
+// pricing error) returns a clean 4xx the form can show directly.
 export async function POST(request: NextRequest) {
   if (!isAllowed(request, reservationRateLimit)) {
     return NextResponse.json(
       { error: "Demasiados pedidos deste endereço, tente novamente mais tarde" },
       { status: 429 }
+    );
+  }
+
+  const customerUser = await getCurrentCustomerUser().catch(() => null);
+  if (!customerUser) {
+    return NextResponse.json(
+      { error: "É necessário iniciar sessão com Google para enviar um pedido de reserva" },
+      { status: 401 }
     );
   }
 
@@ -39,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { reservation, quote } = await ReservationService.create(input);
+    const { reservation, quote } = await ReservationService.create(input, customerUser.id);
 
     // Open flight quote request (no matching published fare) has no
     // catalog item to name — fall back to the route the customer typed.

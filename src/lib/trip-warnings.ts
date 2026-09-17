@@ -32,10 +32,13 @@ function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: numbe
 export function analyzeTripWarnings(items: TripItem[]): TripWarning[] {
   const warnings: TripWarning[] = [];
 
-  // Same catalog item added twice (double-click, or forgot it was already there).
+  // Same catalog item added twice (double-click, or forgot it was already
+  // there). PACKAGE is deliberately excluded — a package carries no
+  // per-form passenger count any more, so adding the same one again is
+  // the intended way to cover a second traveler, not a mistake.
   const seen = new Map<string, TripItem>();
   for (const item of items) {
-    if (!item.itemId) continue;
+    if (!item.itemId || item.serviceType === "PACKAGE") continue;
     const key = `${item.serviceType}:${item.itemId}`;
     if (seen.has(key)) {
       warnings.push({ type: "duplicate", localId: item.localId, itemName: item.name });
