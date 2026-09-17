@@ -38,8 +38,48 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   ].filter((item) => item.visible);
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col">
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Mobile top bar — the fixed-width sidebar below never fit a phone
+       * screen (confirmed: it ate ~60% of a 390px viewport and caused real
+       * content overlap on the dashboard). A native <details> disclosure
+       * needs no client component / new state — this layout stays a
+       * server component. */}
+      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+        <Image
+          src="/icons/logooficial.png"
+          alt="ZambiTour"
+          width={280}
+          height={228}
+          className="h-8 w-auto object-contain invert"
+        />
+        <details className="relative">
+          <summary className="list-none cursor-pointer p-2 -m-2 rounded-lg hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6 text-slate-700">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </summary>
+          <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-xl py-2 z-50">
+            <nav className="flex flex-col gap-1 px-2">
+              {navItems.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+            <div className="px-5 py-3 mt-1 border-t border-slate-200">
+              <p className="text-sm font-medium text-slate-900 truncate">{session.user.name}</p>
+              <p className="text-xs text-slate-500 truncate">{session.user.role}</p>
+              <LogoutButton />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <aside className="hidden md:flex w-60 shrink-0 bg-white border-r border-slate-200 flex-col">
         <div className="px-5 py-5 border-b border-slate-200">
           <Image
             src="/icons/logooficial.png"
@@ -67,7 +107,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 p-8">{children}</main>
+      <main className="flex-1 p-4 md:p-8 min-w-0">{children}</main>
     </div>
   );
 }

@@ -15,7 +15,11 @@ export function Shell({ children, locale, copy }: ShellProps) {
   return (
     <>
       <Navbar locale={locale} copy={copy.nav} />
-      <main className="flex-1">{children}</main>
+      {/* Bottom padding on mobile reserves space for TripDrawer's fixed
+       * "Minha Viagem" trigger button — it otherwise sits on top of
+       * whatever content ends up in that screen band while scrolling
+       * (confirmed: covered form fields, CTAs, and badge chips at 390px). */}
+      <main className="flex-1 pb-24 sm:pb-0">{children}</main>
       <Footer locale={locale} copy={copy.footer} />
       <TripDrawer locale={locale} />
     </>

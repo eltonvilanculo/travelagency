@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type PaymentStatus = "PENDING" | "AUTHORIZED" | "RECEIVED" | "RECONCILED" | "CONFIRMED" | "FAILED" | "TIMEOUT" | "DIVERGENT" | "CANCELLED";
-type PaymentMethod = "MPESA" | "EMOLA";
+type PaymentMethod = "MPESA" | "EMOLA" | "TRANSFER";
 
 type Payment = {
   id: string;
@@ -48,7 +48,7 @@ const STATUS_COLOR: Record<PaymentStatus, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
-const METHOD_LABEL: Record<PaymentMethod, string> = { MPESA: "M-Pesa", EMOLA: "e-Mola" };
+const METHOD_LABEL: Record<PaymentMethod, string> = { MPESA: "M-Pesa", EMOLA: "e-Mola", TRANSFER: "Transferência" };
 
 export function PagamentosClient() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -130,7 +130,7 @@ export function PagamentosClient() {
     <div>
       {/* Summary tiles */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <SummaryTile label="Pendentes" value={String(summary.pending)} />
           <SummaryTile label="Confirmados" value={String(summary.confirmed)} />
           <SummaryTile label="Falhados / cancelados" value={String(summary.failed)} />
@@ -159,12 +159,12 @@ export function PagamentosClient() {
       {error && <div className="mb-4 rounded-lg bg-red-50 text-red-700 text-sm px-4 py-3">{error}</div>}
 
       {loading ? (
-        <p className="text-slate-500 text-sm">A carregar...</p>
+        <p className="text-slate-500 text-sm animate-pulse">A carregar...</p>
       ) : payments.length === 0 ? (
         <p className="text-slate-500 text-sm">Sem pagamentos para os filtros selecionados.</p>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
+          <table className="w-full text-sm min-w-[720px]">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">Reserva</th>
@@ -205,8 +205,9 @@ export function PagamentosClient() {
       )}
 
       <p className="text-xs text-slate-400 mt-4">
-        Pagamentos são iniciados a partir de uma reserva já cotada (separador Reservas). O estado aqui é manual
-        enquanto a integração com o Payen não está ligada: ver nota em src/lib/payments/payen-adapter.ts.
+        Pagamentos são iniciados a partir de uma reserva já cotada (separador Reservas), através do gateway Payen
+        (M-Pesa / e-Mola). O estado muda automaticamente quando o webhook do Payen confirma o pagamento; a mudança
+        manual aqui serve para qualquer caso que o webhook não cubra.
       </p>
 
       <style jsx>{`
