@@ -14,6 +14,7 @@ export type SendEmailInput = {
   to: string;
   subject: string;
   html: string;
+  attachments?: { filename: string; content: string | Buffer; contentType?: string }[];
 };
 
 export type SendEmailResult = { success: true; messageId: string } | { success: false; error: string };
@@ -47,6 +48,7 @@ async function sendOnce(transporter: Transporter, input: SendEmailInput) {
     to: input.to,
     subject: input.subject,
     html: input.html,
+    attachments: input.attachments,
   });
 }
 

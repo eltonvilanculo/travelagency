@@ -1,17 +1,67 @@
 import { prisma } from "@/lib/prisma";
 import { initiatePayment, maskWallet } from "@/lib/payments/payen-adapter";
 import type { PaymentMethod, PaymentStatus, Prisma } from "@/generated/prisma/client";
+import { receiptSchema } from "@/lib/validation/payment";
+import { sendEmail } from "@/lib/email";
+import { paymentReceiptEmail } from "@/lib/email-templates";
 
 const SAFE_ADMIN_SELECT = { id: true, name: true, email: true, role: true } as const;
+
+function receiptAttachment(data: string | null, reference: string) {
+  if (!data) return undefined;
+  const match = data.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return undefined;
+  const extension = match[1] === "application/pdf" ? "pdf" : match[1].split("/")[1] ?? "bin";
+  return {
+    filename: `comprovativo-${reference}.${extension}`,
+    content: Buffer.from(match[2], "base64"),
+    contentType: match[1],
+  };
+}
 
 export type InitiateReservationPaymentInput = {
   reservationId: string;
   method: PaymentMethod;
   /** Not required for TRANSFER — settled in person, no wallet involved. */
   walletNumber?: string;
+  /** Required when the customer submits a manual bank transfer. */
+  customerReceiptData?: string;
 };
 
 export class PaymentService {
+  private static async sendReceiptEmail(paymentId: string) {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { reservation: { include: { customer: true } } },
+    });
+    if (!payment || payment.status !== "CONFIRMED" || !payment.reservation.customer.email || payment.receiptEmailSentAt) return;
+
+    const email = paymentReceiptEmail({
+      customerName: payment.reservation.customer.fullName,
+      reference: payment.reservation.reference,
+      method: payment.method,
+      amount: Number(payment.amount),
+      currency: payment.currency,
+      providerReference: payment.providerReference,
+      paidAt: payment.respondedAt ?? new Date(),
+    });
+    const attachment = receiptAttachment(payment.agentReceiptData ?? payment.customerReceiptData, payment.reservation.reference);
+    const result = await sendEmail({
+      to: payment.reservation.customer.email,
+      subject: email.subject,
+      html: email.html,
+      ...(attachment ? { attachments: [attachment] } : {}),
+    });
+    if (!result.success) {
+      console.error(`Payment receipt email failed for reservation ${payment.reservation.reference}:`, result.error);
+      return;
+    }
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { receiptEmailSentAt: new Date() },
+    });
+  }
+
   /** Either an agent (RF-026: -> AWAITING_PAYMENT) or the customer
    * themselves, paying online for their own already-quoted reservation.
    * Creates (or reuses) the Payment row, calls the Payen gateway adapter,
@@ -37,6 +87,10 @@ export class PaymentService {
     if (!reservation.quotedPrice || !reservation.quotedCurrency) {
       return { ok: false as const, reason: "not_quoted" as const };
     }
+    if (input.method === "TRANSFER" && !input.customerReceiptData && actorId === null) {
+      return { ok: false as const, reason: "receipt_required" as const };
+    }
+    if (input.customerReceiptData) receiptSchema.parse(input.customerReceiptData);
 
     const existingPending = await prisma.payment.findFirst({
       where: { reservationId: reservation.id, status: { in: ["PENDING", "AUTHORIZED", "RECEIVED"] } },
@@ -55,6 +109,7 @@ export class PaymentService {
           walletMasked,
           amount: reservation.quotedPrice,
           currency: reservation.quotedCurrency,
+          customerReceiptData: input.customerReceiptData,
         },
       }));
 
@@ -82,6 +137,7 @@ export class PaymentService {
             providerReference: gatewayResult.providerReference,
             rawResponse: gatewayResult.rawResponse as Prisma.InputJsonValue,
             respondedAt: new Date(),
+            ...(input.customerReceiptData ? { customerReceiptData: input.customerReceiptData } : {}),
           }
         : {
             method: input.method,
@@ -108,8 +164,13 @@ export class PaymentService {
 
     await prisma.reservation.update({
       where: { id: reservation.id },
-      data: { status: "AWAITING_PAYMENT", ...(actorId ? { agentId: actorId } : {}) },
+      data: {
+        status: gatewayResult.status === "CONFIRMED" ? "CONFIRMED" : "AWAITING_PAYMENT",
+        ...(gatewayResult.status === "CONFIRMED" ? { confirmedAt: new Date() } : {}),
+        ...(actorId ? { agentId: actorId } : {}),
+      },
     });
+    if (gatewayResult.status === "CONFIRMED") await this.sendReceiptEmail(updated.id);
 
     return { ok: true as const, payment: updated };
   }
@@ -147,14 +208,18 @@ export class PaymentService {
    * once. A payment already CONFIRMED is a no-op: repeated webhook
    * deliveries for the same success must not re-run side effects, reset
    * confirmedAt, or write a second audit entry. */
-  static async updateStatus(id: string, status: PaymentStatus, actorId: string | null) {
+  static async updateStatus(id: string, status: PaymentStatus, actorId: string | null, agentReceiptData?: string) {
     const before = await prisma.payment.findUnique({ where: { id } });
     if (!before) return null;
     if (before.status === "CONFIRMED") return before;
+    if (status === "CONFIRMED" && before.method === "TRANSFER" && !agentReceiptData) {
+      throw new Error("É obrigatório anexar o comprovativo da agência para confirmar a transferência");
+    }
+    if (agentReceiptData) receiptSchema.parse(agentReceiptData);
 
     const after = await prisma.payment.update({
       where: { id },
-      data: { status, respondedAt: new Date() },
+      data: { status, respondedAt: new Date(), ...(agentReceiptData ? { agentReceiptData } : {}) },
     });
 
     if (status === "CONFIRMED") {
@@ -170,6 +235,7 @@ export class PaymentService {
       before,
       after,
     });
+    if (status === "CONFIRMED") await this.sendReceiptEmail(after.id);
 
     return after;
   }

@@ -238,6 +238,16 @@ export class ReservationService {
     const before = await prisma.reservation.findUnique({ where: { id } });
     if (!before) return null;
 
+    if (status === "CONFIRMED") {
+      const payment = await prisma.payment.findFirst({
+        where: { reservationId: id },
+        orderBy: { createdAt: "desc" },
+      });
+      if (payment?.method === "TRANSFER" && !payment.agentReceiptData) {
+        throw new Error("É obrigatório anexar o comprovativo da agência antes de confirmar a transferência");
+      }
+    }
+
     const after = await prisma.reservation.update({
       where: { id },
       data: {

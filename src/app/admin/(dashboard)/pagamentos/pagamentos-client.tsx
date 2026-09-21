@@ -13,6 +13,8 @@ type Payment = {
   currency: string;
   walletMasked: string | null;
   providerIntentId: string | null;
+  customerReceiptData: string | null;
+  agentReceiptData: string | null;
   createdAt: string;
   respondedAt: string | null;
   reservation: {
@@ -57,6 +59,7 @@ export function PagamentosClient() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [methodFilter, setMethodFilter] = useState("");
+  const [confirmationPaymentId, setConfirmationPaymentId] = useState<string | null>(null);
 
   const loadPayments = async (): Promise<Payment[]> => {
     const params = new URLSearchParams();
@@ -108,18 +111,27 @@ export function PagamentosClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, methodFilter]);
 
-  const handleStatusChange = async (id: string, status: PaymentStatus) => {
+  const handleStatusChange = async (payment: Payment, status: PaymentStatus, agentReceipt?: File) => {
+    if (payment.method === "TRANSFER" && status === "CONFIRMED" && !agentReceipt) {
+      setConfirmationPaymentId(payment.id);
+      return;
+    }
     setError(null);
     try {
-      const response = await fetch(`/api/admin/payments/${id}/status`, {
+      const form = agentReceipt ? new FormData() : null;
+      if (form && agentReceipt) {
+        form.append("status", status);
+        form.append("agentReceipt", agentReceipt);
+      }
+      const response = await fetch(`/api/admin/payments/${payment.id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        ...(form ? { body: form } : { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || "Falha ao mudar estado");
       }
+      setConfirmationPaymentId(null);
       await fetchAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido");
@@ -172,6 +184,7 @@ export function PagamentosClient() {
                 <th className="text-left px-4 py-3">Método</th>
                 <th className="text-left px-4 py-3">Valor</th>
                 <th className="text-left px-4 py-3">Carteira</th>
+                <th className="text-left px-4 py-3">Recibos</th>
                 <th className="text-left px-4 py-3">Estado</th>
               </tr>
             </thead>
@@ -186,16 +199,34 @@ export function PagamentosClient() {
                   <td className="px-4 py-3 text-slate-600">{METHOD_LABEL[p.method]}</td>
                   <td className="px-4 py-3 text-slate-900">{p.currency} {Number(p.amount).toLocaleString("pt-PT")}</td>
                   <td className="px-4 py-3 text-slate-400 font-mono text-xs">{p.walletMasked || "—"}</td>
+                  <td className="px-4 py-3 text-xs space-x-2 whitespace-nowrap">
+                    {p.customerReceiptData ? <a href={p.customerReceiptData} download={`recibo-cliente-${p.reservation.reference}`} target="_blank" rel="noreferrer" className="text-orange-600 hover:underline">Cliente</a> : "—"}
+                    {p.agentReceiptData && <a href={p.agentReceiptData} download={`recibo-agencia-${p.reservation.reference}`} target="_blank" rel="noreferrer" className="text-emerald-700 hover:underline">Agência</a>}
+                  </td>
                   <td className="px-4 py-3">
                     <select
                       value={p.status}
-                      onChange={(e) => handleStatusChange(p.id, e.target.value as PaymentStatus)}
+                      onChange={(e) => handleStatusChange(p, e.target.value as PaymentStatus)}
                       className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${STATUS_COLOR[p.status]}`}
                     >
                       {(Object.keys(STATUS_LABEL) as PaymentStatus[]).map((s) => (
                         <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                       ))}
                     </select>
+                    {confirmationPaymentId === p.id && (
+                      <label className="block mt-2 text-[11px] text-orange-700">
+                        Anexar comprovativo da agência
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          className="block mt-1 max-w-44 text-[11px]"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleStatusChange(p, "CONFIRMED", file);
+                          }}
+                        />
+                      </label>
+                    )}
                   </td>
                 </tr>
               ))}

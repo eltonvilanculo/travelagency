@@ -5,6 +5,7 @@ import { getCurrentCustomerUser } from "@/lib/customer-auth";
 import { PaymentService } from "@/lib/data-access/payments";
 import { initiatePaymentSchema } from "@/lib/validation/payment";
 import { isAllowed, paymentRateLimit } from "@/lib/rate-limit";
+import { receiptDataUrl } from "@/lib/validation/payment";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -39,14 +40,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!owned.ok) return owned.response;
 
   try {
-    const body = await request.json();
-    const parsed = initiatePaymentSchema.parse(body);
+    const contentType = request.headers.get("content-type") ?? "";
+    const body = contentType.includes("multipart/form-data")
+      ? await request.formData()
+      : await request.json();
+    const submittedFields = body instanceof FormData
+      ? { method: body.get("method"), walletNumber: body.get("walletNumber") ?? undefined }
+      : body;
+    const receiptFile = body instanceof FormData ? body.get("receipt") : null;
+    const receipt = receiptFile instanceof File ? await receiptDataUrl(receiptFile) : undefined;
+    const parsed = initiatePaymentSchema.parse(submittedFields);
 
     const result = await PaymentService.initiateForReservation(
       {
         reservationId: id,
         method: parsed.method,
         walletNumber: parsed.method === "TRANSFER" ? undefined : parsed.walletNumber,
+        customerReceiptData: receipt,
       },
       null
     );
@@ -58,11 +68,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       if (result.reason === "gateway_error") {
         return NextResponse.json({ error: result.error }, { status: 502 });
       }
+      if (result.reason === "receipt_required") {
+        return NextResponse.json({ error: "Anexe o comprovativo da transferência" }, { status: 400 });
+      }
       return NextResponse.json({ error: "Esta reserva ainda não tem um valor confirmado para pagar" }, { status: 409 });
     }
 
     return NextResponse.json(result.payment, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && /recibo|comprovativo/i.test(error.message)) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Dados inválidos", details: error.issues }, { status: 400 });
     }

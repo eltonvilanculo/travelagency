@@ -37,7 +37,7 @@ export type InitiatePaymentResult =
       // customer has actually paid. Final confirmation only ever comes
       // from the webhook/GET-verified status (see payen-webhook.ts), or
       // for TRANSFER, an agent manually confirming the funds arrived.
-      status: "PENDING" | "RECEIVED" | "FAILED";
+      status: "PENDING" | "RECEIVED" | "CONFIRMED" | "FAILED";
       rawResponse: Record<string, unknown>;
     }
   | {
@@ -116,7 +116,7 @@ export async function initiatePayment(input: InitiatePaymentInput): Promise<Init
       language: "pt",
     });
 
-    const status = SUCCEEDED.has(result.status) ? "RECEIVED" : FAILED.has(result.status) ? "FAILED" : "PENDING";
+    const status = SUCCEEDED.has(result.status) ? "CONFIRMED" : FAILED.has(result.status) ? "FAILED" : "PENDING";
 
     return {
       ok: true,

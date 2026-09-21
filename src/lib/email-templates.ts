@@ -16,6 +16,78 @@ type ReservationConfirmationInput = {
   currency: Currency | null;
 };
 
+type PaymentReceiptEmailInput = {
+  customerName: string;
+  reference: string;
+  method: string;
+  amount: number;
+  currency: Currency;
+  providerReference?: string | null;
+  paidAt: Date;
+};
+
+const PAYMENT_RECEIPT_COPY = {
+  pt: {
+    subject: (reference: string) => `ZambiTour | Recibo de pagamento (${reference})`,
+    slogan: "Pagamento confirmado",
+    greeting: (name: string) => `Olá ${name},`,
+    body: "Recebemos o seu pagamento. Este email serve como recibo da transação.",
+    reference: "Referência da reserva",
+    method: "Método de pagamento",
+    amount: "Valor pago",
+    providerReference: "Referência da transação",
+    date: "Data do pagamento",
+    closing: "Obrigado por escolher a ZambiTour.",
+    signature: "Equipa ZambiTour",
+    methods: { MPESA: "M-Pesa", EMOLA: "e-Mola", TRANSFER: "Transferência bancária" },
+  },
+  en: {
+    subject: (reference: string) => `ZambiTour | Payment receipt (${reference})`,
+    slogan: "Payment confirmed",
+    greeting: (name: string) => `Hi ${name},`,
+    body: "We received your payment. This email is your transaction receipt.",
+    reference: "Reservation reference",
+    method: "Payment method",
+    amount: "Amount paid",
+    providerReference: "Transaction reference",
+    date: "Payment date",
+    closing: "Thank you for choosing ZambiTour.",
+    signature: "The ZambiTour Team",
+    methods: { MPESA: "M-Pesa", EMOLA: "e-Mola", TRANSFER: "Bank transfer" },
+  },
+} as const;
+
+export function paymentReceiptEmail(input: PaymentReceiptEmailInput): { subject: string; html: string } {
+  // PT is the application's default locale. The locale can be made a
+  // persisted customer preference later without changing this template.
+  const t = PAYMENT_RECEIPT_COPY.pt;
+  const safeName = escapeHtml(input.customerName);
+  const safeReference = escapeHtml(input.reference);
+  const safeMethod = escapeHtml(t.methods[input.method as keyof typeof t.methods] ?? input.method);
+  const providerReference = input.providerReference ? escapeHtml(input.providerReference) : "—";
+  const paidAt = input.paidAt.toLocaleString("pt-PT");
+
+  const html = `
+    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #2b2b28;">
+      ${emailHeader(t.slogan)}
+      <div style="padding: 32px 24px; background: #ffffff;">
+        <p style="font-size: 16px; margin: 0 0 16px;">${t.greeting(safeName)}</p>
+        <p style="font-size: 14px; line-height: 1.6; margin: 0 0 24px;">${t.body}</p>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+          <tr><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.reference}</td><td style="padding: 8px 0; text-align: right; font-weight: 600; font-size: 13px;">${safeReference}</td></tr>
+          <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.method}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${safeMethod}</td></tr>
+          <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.amount}</td><td style="padding: 8px 0; text-align: right; font-weight: 700; color: #d97b29; font-size: 15px;">${formatMZN(input.amount, input.currency, "pt")}</td></tr>
+          <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.providerReference}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${providerReference}</td></tr>
+          <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.date}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${paidAt}</td></tr>
+        </table>
+        <p style="font-size: 14px; margin: 0;">${t.closing}<br/><strong>${t.signature}</strong></p>
+      </div>
+    </div>
+  `.trim();
+
+  return { subject: t.subject(input.reference), html };
+}
+
 // Embedded as a base64 data: URI rather than linked by URL — an <img
 // src="{siteUrl}/..."> pointed at a real site is the normal approach, but
 // this project isn't deployed yet, so siteUrl would resolve to localhost,

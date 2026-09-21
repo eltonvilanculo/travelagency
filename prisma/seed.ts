@@ -1,12 +1,13 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { getDatabaseUrl } from "../src/lib/database-url";
 
 // Local dev seed data only — no admin users or credentials are created
 // here on purpose. Backoffice auth doesn't exist yet (see ROADMAP.md
 // Phase 1); seed it once real password hashing lands.
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: getDatabaseUrl() });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

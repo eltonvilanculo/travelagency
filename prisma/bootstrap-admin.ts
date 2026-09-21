@@ -2,6 +2,7 @@ import "dotenv/config";
 import { hash } from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { getDatabaseUrl } from "../src/lib/database-url";
 
 // Creates (or updates the password of) the first Administrator account,
 // from BOOTSTRAP_ADMIN_* env vars. There's no self-service sign-up in this
@@ -11,7 +12,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 //
 // Usage: npm run admin:bootstrap
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: getDatabaseUrl() });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

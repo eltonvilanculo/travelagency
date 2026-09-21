@@ -24,6 +24,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (!reservation) return NextResponse.json({ error: "Reserva não encontrada" }, { status: 404 });
     return NextResponse.json(reservation);
   } catch (error) {
+    if (error instanceof Error && error.message.includes("comprovativo")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Estado inválido", details: error.issues }, { status: 400 });
     }

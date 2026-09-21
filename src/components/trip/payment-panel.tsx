@@ -28,6 +28,8 @@ const COPY = {
     statusConfirmed: "Pagamento confirmado!",
     statusFailed: "O pagamento falhou. Pode tentar novamente.",
     transferNote: "Guarde a referência da sua reserva e apresente-a no nosso escritório para pagar.",
+    transferReceipt: "Comprovativo da transferência",
+    transferReceiptRequired: "Anexe o comprovativo para enviar a transferência.",
     error: "Algo correu mal, tente novamente.",
   },
   en: {
@@ -42,6 +44,8 @@ const COPY = {
     statusConfirmed: "Payment confirmed!",
     statusFailed: "Payment failed. You can try again.",
     transferNote: "Keep your reservation reference and present it at our office to pay.",
+    transferReceipt: "Transfer receipt",
+    transferReceiptRequired: "Attach the receipt to submit the transfer.",
     error: "Something went wrong, please try again.",
   },
 } as const;
@@ -54,6 +58,7 @@ export function PaymentPanel({ reservationId, itemName, amount, currency, locale
   const [expanded, setExpanded] = useState(false);
   const [method, setMethod] = useState<Method>("MPESA");
   const [wallet, setWallet] = useState("");
+  const [receipt, setReceipt] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,11 +84,16 @@ export function PaymentPanel({ reservationId, itemName, amount, currency, locale
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/reservations/${reservationId}/pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(method === "TRANSFER" ? { method } : { method, walletNumber: wallet }),
-      });
+      const request = method === "TRANSFER"
+        ? (() => {
+            if (!receipt) throw new Error(t.transferReceiptRequired);
+            const form = new FormData();
+            form.append("method", method);
+            form.append("receipt", receipt);
+            return { body: form };
+          })()
+        : { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ method, walletNumber: wallet }) };
+      const res = await fetch(`/api/reservations/${reservationId}/pay`, { method: "POST", ...request });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t.error);
       setStatus(data.status);
@@ -170,7 +180,19 @@ export function PaymentPanel({ reservationId, itemName, amount, currency, locale
           />
         </label>
       ) : (
-        <p className="text-darkgray text-xs">{t.transferNote}</p>
+        <div className="space-y-2">
+          <p className="text-darkgray text-xs">{t.transferNote}</p>
+          <label className="block text-xs font-medium text-darkgray">
+            {t.transferReceipt}
+            <input
+              required
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
+              className="mt-1 block w-full text-xs"
+            />
+          </label>
+        </div>
       )}
 
       {status && status !== "CONFIRMED" && (
