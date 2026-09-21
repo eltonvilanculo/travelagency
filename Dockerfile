@@ -10,7 +10,7 @@ RUN apt-get update -y \
 FROM base AS deps
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm ci \
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm install --no-audit --no-fund \
   && npx prisma generate
 
 FROM base AS builder
@@ -22,7 +22,7 @@ RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma genera
 FROM base AS production-deps
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm ci --omit=dev \
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm install --omit=dev --no-audit --no-fund \
   && npx prisma generate
 
 FROM base AS runner
