@@ -8,21 +8,24 @@ RUN apt-get update -y \
   && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm install --no-audit --no-fund \
+RUN npm install --no-audit --no-fund \
   && npx prisma generate
 
 FROM base AS builder
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma generate \
+RUN npx prisma generate \
   && npm run build
 
 FROM base AS production-deps
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm install --omit=dev --no-audit --no-fund \
+RUN npm install --omit=dev --no-audit --no-fund \
   && npx prisma generate
 
 FROM base AS runner
