@@ -12,19 +12,14 @@
   --color-textdark: #0B2340;
 }
 
-/* Brand typeface — Playfair Display for headings (warm, editorial serif;
-   the character a flat single sans-serif can't give a travel brand),
-   Inter for body (clean, highly legible). Both loaded via next/font/google
-   only on the public [lang] tree (see [lang]/layout.tsx) — the var()
-   fallback chains below are what the admin backoffice actually renders
-   with, since it never loads these font files: a plain system sans/serif,
-   which is exactly right for a data-dense internal tool. */
+/* Brand typeface — use a local/system stack so production builds do not
+   depend on fetching Google Fonts from the deployment environment. */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-playfair-display), Georgia, serif;
+  font-family: Georgia, "Times New Roman", serif;
 }
 
 body {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
 .embla__viewport {

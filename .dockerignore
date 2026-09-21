@@ -1,0 +1,12 @@
+.env*
+!.env.example
+node_modules
+.next
+.git
+.playwright-mcp
+playwright-report
+test-results
+coverage
+*.log
+*.tsbuildinfo
+.DS_Store

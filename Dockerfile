@@ -10,20 +10,19 @@ RUN apt-get update -y \
 FROM base AS deps
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm install \
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm ci \
   && npx prisma generate
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN test -f .env || touch .env
-RUN npx prisma generate \
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma generate \
   && npm run build
 
 FROM base AS production-deps
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm install --omit=dev \
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm ci --omit=dev \
   && npx prisma generate
 
 FROM base AS runner
@@ -45,7 +44,6 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma7.config.ts ./prisma7.config.ts
 COPY --from=builder /app/src/lib/database-url.ts ./src/lib/database-url.ts
-COPY --from=builder /app/.env ./.env
 
 # Next/Image writes optimized images to this directory at runtime. The image
 # is built as root, but the app runs as `nextjs`, so make the runtime cache
