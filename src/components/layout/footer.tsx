@@ -80,30 +80,49 @@ export function Footer({ locale, copy }: FooterProps) {
               className="h-14 w-auto object-contain"
             />
           </Link>
-          <p className="text-orange text-xs uppercase tracking-[0.2em] font-semibold -mt-1.5">{copy.slogan}</p>
-          <p className="text-white/60 max-w-sm leading-relaxed text-sm">{copy.description}</p>
+          <p className="text-orange text-xs uppercase tracking-[0.2em] font-semibold -mt-1.5">
+            {copy.slogan}
+          </p>
+          <p className="text-white/60 max-w-sm leading-relaxed text-sm">
+            {copy.description}
+          </p>
         </div>
 
         {/* Right: contact details + Instagram */}
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5 text-sm text-white/60">
-            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">{copy.contactTitle}</p>
-            <p>{copy.addressLine1}, {copy.addressLine2}</p>
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              {copy.contactTitle}
+            </p>
+            <p>
+              {copy.addressLine1}, {copy.addressLine2}
+            </p>
             <div className="flex flex-wrap gap-x-4">
-              <a href={`tel:${copy.phone1.replace(/\s/g, "")}`} className="hover:text-orange transition-colors w-fit">
+              <a
+                href={`tel:${copy.phone1.replace(/\s/g, "")}`}
+                className="hover:text-orange transition-colors w-fit"
+              >
                 {copy.phone1}
               </a>
-              <a href={`tel:${copy.phone2.replace(/\s/g, "")}`} className="hover:text-orange transition-colors w-fit">
+              <a
+                href={`tel:${copy.phone2.replace(/\s/g, "")}`}
+                className="hover:text-orange transition-colors w-fit"
+              >
                 {copy.phone2}
               </a>
-              <a href={`mailto:${copy.email}`} className="hover:text-orange transition-colors w-fit">
+              <a
+                href={`mailto:${copy.email}`}
+                className="hover:text-orange transition-colors w-fit"
+              >
                 {copy.email}
               </a>
             </div>
           </div>
 
           <div>
-            <p className="text-white/40 text-xs uppercase tracking-widest mb-2.5">{copy.followUs}</p>
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-2.5">
+              {copy.followUs}
+            </p>
             <div className="flex items-center gap-2.5 flex-wrap">
               {socialIcons.map((s) => (
                 <Link
@@ -111,7 +130,11 @@ export function Footer({ locale, copy }: FooterProps) {
                   href={s.href}
                   aria-label={s.label}
                   target={s.href.startsWith("http") ? "_blank" : undefined}
-                  rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  rel={
+                    s.href.startsWith("http")
+                      ? "noopener noreferrer"
+                      : undefined
+                  }
                   className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-orange hover:bg-orange/20 transition-all duration-300"
                 >
                   {s.icon}
@@ -125,7 +148,10 @@ export function Footer({ locale, copy }: FooterProps) {
       {/* Copyright */}
       <div className="flex flex-col gap-2 sm:flex-row justify-between items-center pt-5 text-xs text-white/40">
         <p>{copy.copyright}</p>
-        <p>{copy.developedBy} <span className="text-orange">Vagner Caetano Simango</span>.</p>
+        <p>
+          {copy.developedBy}{" "}
+          <span className="text-orange">J store & Fix Multiservice, Lda</span>.
+        </p>
       </div>
     </footer>
   );
