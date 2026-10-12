@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { TripDrawer } from "@/components/trip/trip-drawer";
+import { ScrollEffects } from "@/components/ui/scroll-effects";
 import { FaqChat } from "@/components/faq/faq-chat";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
@@ -15,6 +16,7 @@ type ShellProps = {
 export function Shell({ children, locale, copy }: ShellProps) {
   return (
     <>
+      <ScrollEffects />
       <Navbar locale={locale} copy={copy.nav} />
       {/* Bottom padding on mobile reserves space for TripDrawer's fixed
        * "Minha Viagem" trigger button — it otherwise sits on top of

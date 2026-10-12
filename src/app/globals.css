@@ -1,25 +1,44 @@
 @import "tailwindcss";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
 
 @theme {
-  /* ZambiTour brand palette — deep navy + gold, per corporate profile */
-  --color-beige: #EEF2F6;
-  --color-leafy: #0B2A45;
-  --color-lightbeige: #FAFBFC;
-  --color-orange: #C99A3B;
-  --color-shadow: #E2E7ED;
-  --color-darkgray: #90A0AC;
-  --color-parablack: #16222E;
-  --color-textdark: #0B2340;
+  /* Zambi brand palette: yellow #E1AF28, blue #0B3E55, dark blue #04364D, white */
+  --color-beige: #EEF3F6;
+  --color-leafy: #0B3E55;
+  --color-navy: #04364D;
+  --color-lightbeige: #FAFCFD;
+  --color-orange: #E1AF28;
+  --color-shadow: #E1E8ED;
+  --color-darkgray: #8FA3AF;
+  --color-parablack: #04364D;
+  --color-textdark: #04364D;
+
+  --font-sans: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-poppins), Poppins, Helvetica, Arial, sans-serif;
 }
 
-/* Brand typeface — use a local/system stack so production builds do not
-   depend on fetching Google Fonts from the deployment environment. */
-h1, h2, h3, h4, h5, h6 {
-  font-family: Georgia, "Times New Roman", serif;
+:root {
+  --font-poppins: "Poppins";
 }
 
+/* Brand typography: Helvetica for documents and long text; Poppins for the
+   logo and short text (headings, nav, buttons, labels). Poppins is
+   self-hosted via @fontsource so builds never fetch from Google. */
 body {
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  color: #04364D;
+}
+
+h1, h2, h3, h4, h5, h6, button, nav, label, .font-display {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background: #E1AF28;
+  color: #04364D;
 }
 
 .embla__viewport {
@@ -32,7 +51,7 @@ body {
 }
 
 .bg-leafy select option {
-  background-color: #0B2A45;
+  background-color: #0B3E55;
   color: #ffffff;
 }
 
@@ -97,7 +116,7 @@ body {
 }
 .badge-shimmer {
   background: linear-gradient(90deg,
-    #C99A3B 0%, #dab766 35%, #f3e3b8 50%, #dab766 65%, #C99A3B 100%
+    #E1AF28 0%, #ecc65c 35%, #f7e3a6 50%, #ecc65c 65%, #E1AF28 100%
   );
   background-size: 300% auto;
   animation: shimmer-sweep 2.8s linear infinite;
@@ -191,4 +210,39 @@ body {
   background: linear-gradient(90deg, #e7e1d5 25%, #f3efe5 50%, #e7e1d5 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* ─── Scroll reveal (data-reveal attribute set by ScrollEffects) ─── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+}
+[data-reveal="in"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Smooth anchor scrolling + gentle press/hover feedback on interactive UI */
+html {
+  scroll-behavior: smooth;
+}
+button:not(:disabled),
+a[class*="rounded"] {
+  transition-property: color, background-color, border-color, transform, box-shadow, opacity;
+  transition-duration: 200ms;
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

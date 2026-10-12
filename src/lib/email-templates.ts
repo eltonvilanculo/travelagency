@@ -68,7 +68,7 @@ export function paymentReceiptEmail(input: PaymentReceiptEmailInput): { subject:
   const paidAt = input.paidAt.toLocaleString("pt-PT");
 
   const html = `
-    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #2b2b28;">
+    <div style="font-family: Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #04364d;">
       ${emailHeader(t.slogan)}
       <div style="padding: 32px 24px; background: #ffffff;">
         <p style="font-size: 16px; margin: 0 0 16px;">${t.greeting(safeName)}</p>
@@ -76,7 +76,7 @@ export function paymentReceiptEmail(input: PaymentReceiptEmailInput): { subject:
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
           <tr><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.reference}</td><td style="padding: 8px 0; text-align: right; font-weight: 600; font-size: 13px;">${safeReference}</td></tr>
           <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.method}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${safeMethod}</td></tr>
-          <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.amount}</td><td style="padding: 8px 0; text-align: right; font-weight: 700; color: #d97b29; font-size: 15px;">${formatMZN(input.amount, input.currency, "pt")}</td></tr>
+          <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.amount}</td><td style="padding: 8px 0; text-align: right; font-weight: 700; color: #e1af28; font-size: 15px;">${formatMZN(input.amount, input.currency, "pt")}</td></tr>
           <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.providerReference}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${providerReference}</td></tr>
           <tr style="border-top: 1px solid #e7e1d5;"><td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.date}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${paidAt}</td></tr>
         </table>
@@ -114,9 +114,9 @@ function getLogoDataUri(): string {
 function emailHeader(slogan: string): string {
   const logo = getLogoDataUri();
   return `
-      <div style="background: #16321f; padding: 24px; text-align: center;">
+      <div style="background: #04364d; padding: 24px; text-align: center;">
         ${logo ? `<img src="${logo}" alt="ZambiTour" width="160" style="height: auto; display: block; margin: 0 auto;" />` : `<span style="color: #fff; font-size: 20px; font-weight: 600; letter-spacing: 0.02em;">ZambiTour</span>`}
-        <p style="color: #d97b29; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin: 10px 0 0; font-weight: 600;">${slogan}</p>
+        <p style="color: #e1af28; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin: 10px 0 0; font-weight: 600;">${slogan}</p>
       </div>`;
 }
 
@@ -204,7 +204,7 @@ export function tripConfirmationEmail(input: TripConfirmationInput): { subject: 
   const hasAnyPrice = input.items.some((item) => item.total != null);
 
   const html = `
-    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #2b2b28;">
+    <div style="font-family: Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #04364d;">
       ${emailHeader(t.slogan)}
       <div style="padding: 32px 24px; background: #ffffff;">
         <p style="font-size: 16px; margin: 0 0 16px;">${t.greeting(safeName)}</p>
@@ -213,15 +213,15 @@ export function tripConfirmationEmail(input: TripConfirmationInput): { subject: 
           ${rows}
           ${
             hasAnyPrice
-              ? `<tr style="border-top: 2px solid #d97b29;">
+              ? `<tr style="border-top: 2px solid #e1af28;">
                   <td style="padding: 10px 0; font-weight: 700; font-size: 13px;">${tt.total}</td>
-                  <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #d97b29; font-size: 15px;">MZN ${grandTotalMzn.toLocaleString(numberFmt)}</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #e1af28; font-size: 15px;">MZN ${grandTotalMzn.toLocaleString(numberFmt)}</td>
                 </tr>`
               : ""
           }
         </table>
         <p style="text-align: center; margin: 24px 0;">
-          <a href="${input.quoteUrl}" style="display: inline-block; background: #d97b29; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 600;">${tt.downloadQuote}</a>
+          <a href="${input.quoteUrl}" style="display: inline-block; background: #e1af28; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 600;">${tt.downloadQuote}</a>
         </p>
         <p style="font-size: 14px; line-height: 1.6; margin: 0 0 24px; color: #6b6b64;">${t.body2}</p>
         <p style="font-size: 14px; margin: 0;">${t.closing}<br/><strong>${t.signature}</strong></p>
@@ -242,7 +242,7 @@ export function reservationConfirmationEmail(input: ReservationConfirmationInput
       : t.quotePending;
 
   const html = `
-    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #2b2b28;">
+    <div style="font-family: Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #04364d;">
       ${emailHeader(t.slogan)}
       <div style="padding: 32px 24px; background: #ffffff;">
         <p style="font-size: 16px; margin: 0 0 16px;">${t.greeting(safeName)}</p>
@@ -258,7 +258,7 @@ export function reservationConfirmationEmail(input: ReservationConfirmationInput
           </tr>
           <tr style="border-top: 1px solid #e7e1d5;">
             <td style="padding: 8px 0; color: #6b6b64; font-size: 13px;">${t.estimate}</td>
-            <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #d97b29; font-size: 15px;">${formattedTotal}</td>
+            <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #e1af28; font-size: 15px;">${formattedTotal}</td>
           </tr>
         </table>
         <p style="font-size: 14px; line-height: 1.6; margin: 0 0 24px; color: #6b6b64;">${t.body2}</p>
